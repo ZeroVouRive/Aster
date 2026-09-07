@@ -45,9 +45,25 @@ jobs:
           shutil.rmtree(folder)
           print(f'Verified and imported {len(expected)} source files.')
           PY
+      - name: Retain the validated resize synchronization in smoke tests
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('tests/smoke.py')
+          source = path.read_text()
+          old = "await page.set_viewport_size({'width':390,'height':844});await page.evaluate('Aster.toggleStart()')"
+          new = "await page.set_viewport_size({'width':390,'height':844})\n            # Let the resize handler dismiss panels before opening Start.\n            await page.evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))')\n            await page.evaluate('Aster.toggleStart()')"
+          assert source.count(old) == 1, 'Expected exactly one test synchronization point'
+          path.write_text(source.replace(old, new))
+          readme = Path('README.md')
+          text = readme.read_text()
+          text = text.replace('## Start\n', '## Start\n\n### GitHub Pages\n\n[Open Aster Desktop](https://wieslawsoltes.github.io/Aster/) · [Standalone HTML](https://wieslawsoltes.github.io/Aster/Aster.html)\n\nThe hosted edition uses HTTPS and the same local-first application source. Files remain in your browser workspace; GitHub Pages does not receive your virtual files.\n', 1)
+          readme.write_text(text)
+          PY
       - name: Validate JavaScript and rebuild the standalone edition
         run: |
           for file in src/*.js sw.js; do node --check "$file"; done
+          python3 -m py_compile tests/smoke.py build.py start.py
           python3 build.py
           python3 - <<'PY'
           import hashlib
