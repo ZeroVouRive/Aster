@@ -1,0 +1,304 @@
+{
+  "environment": {
+    "storage": "Memory only",
+    "renderer": "Canvas 2D",
+    "secureContext": false,
+    "gpuAPI": false,
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/144.0.0.0 Safari/537.36"
+  },
+  "mode": "injected local source",
+  "tests": [
+    {
+      "test": "Boot and 18 registered built-in apps",
+      "status": "PASS",
+      "seconds": 0.002,
+      "detail": "Canvas 2D"
+    },
+    {
+      "test": "Virtual file CRUD, subtree copy, move, recycle, restore",
+      "status": "PASS",
+      "seconds": 0.006,
+      "detail": "Unicode content and nested folder structure preserved"
+    },
+    {
+      "test": "Protected folders and invalid destinations reject safely",
+      "status": "PASS",
+      "seconds": 0.004,
+      "detail": "5 rejected operations"
+    },
+    {
+      "test": "Calculator parser arithmetic, scientific functions and errors",
+      "status": "PASS",
+      "seconds": 0.003,
+      "detail": "9 arithmetic and 5 rejection cases"
+    },
+    {
+      "test": "App mount: files",
+      "status": "PASS",
+      "seconds": 0.24,
+      "detail": "40 controls"
+    },
+    {
+      "test": "App mount: notepad",
+      "status": "PASS",
+      "seconds": 0.132,
+      "detail": "12 controls"
+    },
+    {
+      "test": "App mount: browser",
+      "status": "PASS",
+      "seconds": 0.144,
+      "detail": "15 controls"
+    },
+    {
+      "test": "App mount: terminal",
+      "status": "PASS",
+      "seconds": 0.227,
+      "detail": "1 controls"
+    },
+    {
+      "test": "App mount: paint",
+      "status": "PASS",
+      "seconds": 0.118,
+      "detail": "31 controls"
+    },
+    {
+      "test": "App mount: photos",
+      "status": "PASS",
+      "seconds": 0.126,
+      "detail": "13 controls"
+    },
+    {
+      "test": "App mount: media",
+      "status": "PASS",
+      "seconds": 0.131,
+      "detail": "6 controls"
+    },
+    {
+      "test": "App mount: code",
+      "status": "PASS",
+      "seconds": 0.252,
+      "detail": "13 controls"
+    },
+    {
+      "test": "App mount: snips",
+      "status": "PASS",
+      "seconds": 0.126,
+      "detail": "2 controls"
+    },
+    {
+      "test": "App mount: calculator",
+      "status": "PASS",
+      "seconds": 0.226,
+      "detail": "44 controls"
+    },
+    {
+      "test": "App mount: calendar",
+      "status": "PASS",
+      "seconds": 0.131,
+      "detail": "46 controls"
+    },
+    {
+      "test": "App mount: clock",
+      "status": "PASS",
+      "seconds": 0.136,
+      "detail": "8 controls"
+    },
+    {
+      "test": "App mount: tasks",
+      "status": "PASS",
+      "seconds": 0.118,
+      "detail": "15 controls"
+    },
+    {
+      "test": "App mount: mines",
+      "status": "PASS",
+      "seconds": 0.134,
+      "detail": "83 controls"
+    },
+    {
+      "test": "App mount: settings",
+      "status": "PASS",
+      "seconds": 0.133,
+      "detail": "13 controls"
+    },
+    {
+      "test": "App mount: taskmanager",
+      "status": "PASS",
+      "seconds": 0.128,
+      "detail": "4 controls"
+    },
+    {
+      "test": "App mount: store",
+      "status": "PASS",
+      "seconds": 0.129,
+      "detail": "38 controls"
+    },
+    {
+      "test": "App mount: welcome",
+      "status": "PASS",
+      "seconds": 0.214,
+      "detail": "6 controls"
+    },
+    {
+      "test": "Notepad actual typing and Ctrl+S save",
+      "status": "PASS",
+      "seconds": 0.432,
+      "detail": "Ctrl+S saved Unicode text"
+    },
+    {
+      "test": "Unsaved document close can be cancelled",
+      "status": "PASS",
+      "seconds": 0.116,
+      "detail": null
+    },
+    {
+      "test": "Terminal commands manipulate real virtual files",
+      "status": "PASS",
+      "seconds": 0.119,
+      "detail": "Quoted names, redirection, cp, mv and cat"
+    },
+    {
+      "test": "Window manager pointer drag, resize and state transitions",
+      "status": "PASS",
+      "seconds": 0.637,
+      "detail": "Pointer drag/resize and snap/minimize/maximize/restore"
+    },
+    {
+      "test": "Virtual desktop switching and window transfer",
+      "status": "PASS",
+      "seconds": 0.004,
+      "detail": "3 desktops"
+    },
+    {
+      "test": "Start menu app search and keyboard launch",
+      "status": "PASS",
+      "seconds": 0.544,
+      "detail": "Start search launches app"
+    },
+    {
+      "test": "File Explorer searches actual saved file",
+      "status": "PASS",
+      "seconds": 0.332,
+      "detail": "File search finds saved document"
+    },
+    {
+      "test": "Paint pointer drawing and real PNG save",
+      "status": "PASS",
+      "seconds": 0.784,
+      "detail": "Pointer drawing saved as a real PNG (17416 bytes)"
+    },
+    {
+      "test": "Photos decodes the newly created PNG",
+      "status": "PASS",
+      "seconds": 0.13,
+      "detail": [
+        "960\u00d7600",
+        "1600\u00d71000",
+        "1600\u00d71000",
+        "1600\u00d71000",
+        "960\u00d7600"
+      ]
+    },
+    {
+      "test": "Code Studio executes sandbox app and saves project",
+      "status": "PASS",
+      "seconds": 0.508,
+      "detail": "Real sandbox JS ran; parent access denied; project saved"
+    },
+    {
+      "test": "Orbit Browser runs local HTML application",
+      "status": "PASS",
+      "seconds": 0.214,
+      "detail": "Local HTML button executed"
+    },
+    {
+      "test": "Media Player actual audio decode and playback",
+      "status": "PASS",
+      "seconds": 0.4,
+      "detail": "WAV duration 12 seconds; playback clock advances"
+    },
+    {
+      "test": "Tasks and Calendar store editable records",
+      "status": "PASS",
+      "seconds": 0.277,
+      "detail": "Tasks and calendar written to workspace store"
+    },
+    {
+      "test": "Mines game logic and completion",
+      "status": "PASS",
+      "seconds": 0.156,
+      "detail": "Safe first click, correct mine count and win detection"
+    },
+    {
+      "test": "Settings views, themes and 12-hour preference",
+      "status": "PASS",
+      "seconds": 0.66,
+      "detail": "All 6 settings views and boolean clock preference"
+    },
+    {
+      "test": "Backup JSON text and binary round-trip",
+      "status": "PASS",
+      "seconds": 0.035,
+      "detail": "31 file/folder records; text and binary round-trip"
+    },
+    {
+      "test": "HTML app installation and sandbox registration",
+      "status": "PASS",
+      "seconds": 0.019,
+      "detail": "custom-mtrlkca5-7ek6uf764r"
+    },
+    {
+      "test": "Timer expiry notification",
+      "status": "PASS",
+      "seconds": 1.403,
+      "detail": "Expired timer triggers a real desktop notification"
+    },
+    {
+      "test": "Visual lock resumes without losing windows",
+      "status": "PASS",
+      "seconds": 0.165,
+      "detail": "Visual lock and resume"
+    },
+    {
+      "test": "Narrow-screen layout",
+      "status": "PASS",
+      "seconds": 0.372,
+      "detail": "390\u00d7844 Start menu stays within viewport"
+    },
+    {
+      "test": "No uncaught JavaScript exceptions",
+      "status": "PASS",
+      "seconds": 0.002,
+      "detail": null
+    }
+  ],
+  "uncaughtErrors": [],
+  "console": [
+    {
+      "level": "warning",
+      "text": "Persistent storage unavailable SecurityError: Failed to execute 'open' on 'IDBFactory': access to the Indexed Database API is denied in this context.\n    at db (<anonymous>:142:88)\n    at new Promise (<anonymous>)\n    at Database.init (<anonymous>:142:33)\n    at OS.init (<anonymous>:441:21)\n    at <anonymous>:523:18\n    at <anonymous>:558:7\n    at <anonymous>:561:3\n    at addScriptContent (eval at evaluate (:290:30), <anonymous>:7:21)\n    at UtilityScript.evaluate (<anonymous>:292:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "level": "log",
+      "text": "Hello from your Aster app!"
+    },
+    {
+      "level": "log",
+      "text": "Hello from your Aster app!"
+    },
+    {
+      "level": "log",
+      "text": "Button clicked 1"
+    },
+    {
+      "level": "log",
+      "text": "Hello from your Aster app!"
+    }
+  ],
+  "limitations": [
+    "Native folder and screen capture permission dialogs are not automated.",
+    "No physical-GPU performance benchmark was performed.",
+    "Injected about:blank has an opaque origin: IndexedDB persistence, WebGPU initialization, and service-worker offline mode were not exercised."
+  ]
+}
