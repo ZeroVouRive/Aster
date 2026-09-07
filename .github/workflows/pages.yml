@@ -1,0 +1,108 @@
+name: Deploy Aster to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aster-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check source and build the standalone edition
+        run: |
+          test -f index.html
+          for file in src/*.js sw.js; do node --check "$file"; done
+          python3 -m py_compile build.py start.py tests/smoke.py
+          python3 build.py
+      - name: Prepare only the public runtime files
+        run: |
+          mkdir -p _site
+          cp index.html Aster.html manifest.webmanifest sw.js LICENSE _site/
+          cp -R src assets _site/
+          touch _site/.nojekyll
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          root = Path('_site')
+          files = {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.rglob('*')) if p.is_file()}
+          (root / 'deployment.json').write_text(json.dumps({'commit': os.environ['GITHUB_SHA'], 'files': files}, indent=2) + '\n')
+          PY
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  browser-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install the browser test runner
+        run: |
+          python3 -m pip install playwright
+          python3 -m playwright install --with-deps chromium
+      - name: Run the HTTP-served browser smoke suite
+        run: |
+          python3 start.py --no-browser --port 8765 > /tmp/aster-server.log 2>&1 &
+          python3 - <<'PY'
+          import time, urllib.request
+          for attempt in range(50):
+              try:
+                  with urllib.request.urlopen('http://localhost:8765/', timeout=2) as response:
+                      assert response.status == 200
+                  break
+              except Exception:
+                  time.sleep(0.2)
+          else:
+              raise SystemExit('Aster localhost server did not start')
+          PY
+          BROWSER="$(python3 - <<'PY'
+          from playwright.sync_api import sync_playwright
+          with sync_playwright() as p:
+              print(p.chromium.executable_path)
+          PY
+          )"
+          python3 tests/smoke.py --url http://localhost:8765/ --browser "$BROWSER"
+      - name: Retain browser reports and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aster-browser-test-results
+          path: |
+            tests/results.json
+            tests/*.png
+            /tmp/aster-server.log
