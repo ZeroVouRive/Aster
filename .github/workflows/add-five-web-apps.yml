@@ -189,6 +189,17 @@ jobs:
           output = ROOT / 'tests/web-apps/artifacts'; output.mkdir(parents=True, exist_ok=True)
           (output / 'requested-five-audit.json').write_text(json.dumps(audits, ensure_ascii=False, indent=2) + '\n')
           PYTHON
+      - name: Await the actual return-to-desktop resize before reopening Start
+        run: |
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          p=Path('tests/web-apps/browser.py')
+          text=p.read_text()
+          old="close_all();page.set_viewport_size({'width':1440,'height':1000})"
+          new="close_all();page.evaluate('window.webResizeBack=false;window.addEventListener(\"resize\",()=>window.webResizeBack=true,{once:true})');page.set_viewport_size({'width':1440,'height':1000});page.wait_for_function('window.webResizeBack && innerWidth===1440')"
+          assert text.count(old)==1
+          p.write_text(text.replace(old,new))
+          PYTHON
       - name: Validate source, catalog and rebuilt standalone
         run: |
           for file in src/*.js sw.js; do node --check "$file"; done
