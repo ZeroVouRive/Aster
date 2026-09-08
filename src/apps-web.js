@@ -5,7 +5,7 @@
     if (!catalog) throw new Error('The web app catalog was not loaded.');
     const categories = new Map(catalog.categories.map(item => [item.id, item]));
     const allowedOrigin = 'https://wieslawsoltes.github.io';
-    const recordingApps = new Set(['Frameforge', 'PulsegridStudio', 'SonoraStudio', 'SignalForgeStudio']);
+    const recordingApps = new Set(['Frameforge', 'PulsegridStudio', 'SonoraStudio', 'SignalForgeStudio', 'VeyraWorkspace']);
     function checkedURL(app) {
         const url = new URL(app.url);
         if (url.origin !== allowedOrigin || url.username || url.password ||

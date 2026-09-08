@@ -182,6 +182,29 @@
       ]
     },
     {
+      "name": "AsterionEDA",
+      "createdAt": "2026-09-08T17:12:53Z",
+      "createdLocal": "2026-09-08T19:12:53+02:00",
+      "repository": "https://github.com/wieslawsoltes/AsterionEDA",
+      "readmeSHA": "bcb8a66d9e6e6171efb0fe04743c5bbbc0fc8124",
+      "included": true,
+      "reason": "User-requested addition to the reviewed web-app collection.",
+      "auditedAt": "2026-09-08T18:59:25.060008+00:00",
+      "deployments": [
+        {
+          "requestedUrl": "https://wieslawsoltes.github.io/AsterionEDA/",
+          "status": 200,
+          "finalUrl": "https://wieslawsoltes.github.io/AsterionEDA/",
+          "headers": {
+            "content-type": "text/html; charset=utf-8"
+          },
+          "bytes": 251624,
+          "sha256": "e0d9a93bba0b2456a031d87ec57dda683e8a368077c8ce58a9761bc52f8936d9",
+          "title": "Asterion EDA · Aurora Sensor Hub"
+        }
+      ]
+    },
+    {
       "name": "AureliaProcess",
       "createdAt": "2026-09-07T20:23:20Z",
       "createdLocal": "2026-09-07T22:23:20+02:00",
@@ -490,28 +513,6 @@
       ]
     },
     {
-      "name": "Fluxweave",
-      "createdAt": "2026-09-06T20:57:45Z",
-      "createdLocal": "2026-09-06T22:57:45+02:00",
-      "repository": "https://github.com/wieslawsoltes/Fluxweave",
-      "readmeSHA": "ecb5af987622cc9a80c286fe18f03dc9cbcfc2db",
-      "included": true,
-      "reason": "Public browser application with a deployed HTML entry point.",
-      "deployments": [
-        {
-          "requestedUrl": "https://wieslawsoltes.github.io/Fluxweave/",
-          "status": 200,
-          "finalUrl": "https://wieslawsoltes.github.io/Fluxweave/",
-          "headers": {
-            "content-type": "text/html; charset=utf-8"
-          },
-          "bytes": 13595,
-          "sha256": "625a9f451848ff5def9d9b7ed7af451043fdda6011a05a38ec8465b83cdb3932",
-          "title": "Fluxweave · Visual programming"
-        }
-      ]
-    },
-    {
       "name": "FluxWorksStudio",
       "createdAt": "2026-09-06T20:54:15Z",
       "createdLocal": "2026-09-06T22:54:15+02:00",
@@ -530,6 +531,28 @@
           "bytes": 9728,
           "sha256": "51bacceb97b44a9ea39a67d0ba83b14ff7c7127f30849c756fd65118e0f35ddf",
           "title": "FluxWorks Studio · Simulation workbench"
+        }
+      ]
+    },
+    {
+      "name": "Fluxweave",
+      "createdAt": "2026-09-06T20:57:45Z",
+      "createdLocal": "2026-09-06T22:57:45+02:00",
+      "repository": "https://github.com/wieslawsoltes/Fluxweave",
+      "readmeSHA": "ecb5af987622cc9a80c286fe18f03dc9cbcfc2db",
+      "included": true,
+      "reason": "Public browser application with a deployed HTML entry point.",
+      "deployments": [
+        {
+          "requestedUrl": "https://wieslawsoltes.github.io/Fluxweave/",
+          "status": 200,
+          "finalUrl": "https://wieslawsoltes.github.io/Fluxweave/",
+          "headers": {
+            "content-type": "text/html; charset=utf-8"
+          },
+          "bytes": 13595,
+          "sha256": "625a9f451848ff5def9d9b7ed7af451043fdda6011a05a38ec8465b83cdb3932",
+          "title": "Fluxweave · Visual programming"
         }
       ]
     },
@@ -1414,6 +1437,29 @@
       ]
     },
     {
+      "name": "VeyraWorkspace",
+      "createdAt": "2026-09-08T13:59:54Z",
+      "createdLocal": "2026-09-08T15:59:54+02:00",
+      "repository": "https://github.com/wieslawsoltes/VeyraWorkspace",
+      "readmeSHA": "d6c2a4e52a02997297959fbfd03d1badf12aa96c",
+      "included": true,
+      "reason": "User-requested addition to the reviewed web-app collection.",
+      "auditedAt": "2026-09-08T18:59:25.060008+00:00",
+      "deployments": [
+        {
+          "requestedUrl": "https://wieslawsoltes.github.io/VeyraWorkspace/",
+          "status": 200,
+          "finalUrl": "https://wieslawsoltes.github.io/VeyraWorkspace/",
+          "headers": {
+            "content-type": "text/html; charset=utf-8"
+          },
+          "bytes": 1488,
+          "sha256": "18c9b4148c58adf79c63851c07ac821adcc67fe28dbb349efde23ee3742e7795",
+          "title": "Veyra · Your space to work together"
+        }
+      ]
+    },
+    {
       "name": "VoltWeave",
       "createdAt": "2026-09-06T19:35:55Z",
       "createdLocal": "2026-09-06T21:35:55+02:00",
@@ -1501,5 +1547,6 @@
         }
       ]
     }
-  ]
+  ],
+  "updatedAt": "2026-09-08T18:59:25.060008+00:00"
 }

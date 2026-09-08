@@ -5467,7 +5467,7 @@ OS.register('win32',{title:'Win32 Lab',description:'Run a limited set of real x8
 'use strict';
 (() => {
     const data = {
-  "version": 1,
+  "version": 2,
   "owner": "wieslawsoltes",
   "timezone": "Europe/Warsaw",
   "startInclusive": "2026-09-06T00:00:00+02:00",
@@ -5733,6 +5733,15 @@ OS.register('win32',{title:'Win32 Lab',description:'Run a limited set of real x8
       "createdAt": "2026-09-07T13:50:05Z",
       "url": "https://wieslawsoltes.github.io/StratumCAD/",
       "documentTitle": "Stratum CAD · Riverside Studio"
+    },
+    {
+      "repo": "AsterionEDA",
+      "title": "Asterion EDA",
+      "description": "Electronic design automation and circuit design workbench",
+      "category": "cad",
+      "createdAt": "2026-09-08T17:12:53Z",
+      "url": "https://wieslawsoltes.github.io/AsterionEDA/",
+      "documentTitle": "Asterion EDA · Aurora Sensor Hub"
     },
     {
       "repo": "AetherDiscovery",
@@ -6023,6 +6032,15 @@ OS.register('win32',{title:'Win32 Lab',description:'Run a limited set of real x8
       "documentTitle": "Nexora Diagram"
     },
     {
+      "repo": "VeyraWorkspace",
+      "title": "Veyra Workspace",
+      "description": "Collaboration workspace with chat, meetings, shared notes and a WebGPU whiteboard",
+      "category": "office",
+      "createdAt": "2026-09-08T13:59:54Z",
+      "url": "https://wieslawsoltes.github.io/VeyraWorkspace/",
+      "documentTitle": "Veyra · Your space to work together"
+    },
+    {
       "repo": "ForgeStudio",
       "title": "ForgeStudio",
       "description": "Code editing and development environment",
@@ -6139,7 +6157,8 @@ OS.register('win32',{title:'Win32 Lab',description:'Run a limited set of real x8
       "url": "https://wieslawsoltes.github.io/VantaForge/",
       "documentTitle": "Vanta Forge — Aether Relay"
     }
-  ]
+  ],
+  "updatedAt": "2026-09-08T18:59:25.060008+00:00"
 };
     for (const app of data.apps) {
         app.id = 'web-' + app.repo.toLowerCase();
@@ -6163,7 +6182,7 @@ OS.register('win32',{title:'Win32 Lab',description:'Run a limited set of real x8
     if (!catalog) throw new Error('The web app catalog was not loaded.');
     const categories = new Map(catalog.categories.map(item => [item.id, item]));
     const allowedOrigin = 'https://wieslawsoltes.github.io';
-    const recordingApps = new Set(['Frameforge', 'PulsegridStudio', 'SonoraStudio', 'SignalForgeStudio']);
+    const recordingApps = new Set(['Frameforge', 'PulsegridStudio', 'SonoraStudio', 'SignalForgeStudio', 'VeyraWorkspace']);
     function checkedURL(app) {
         const url = new URL(app.url);
         if (url.origin !== allowedOrigin || url.username || url.password ||

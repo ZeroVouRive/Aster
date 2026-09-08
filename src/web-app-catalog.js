@@ -2,7 +2,7 @@
 'use strict';
 (() => {
     const data = {
-  "version": 1,
+  "version": 2,
   "owner": "wieslawsoltes",
   "timezone": "Europe/Warsaw",
   "startInclusive": "2026-09-06T00:00:00+02:00",
@@ -268,6 +268,15 @@
       "createdAt": "2026-09-07T13:50:05Z",
       "url": "https://wieslawsoltes.github.io/StratumCAD/",
       "documentTitle": "Stratum CAD · Riverside Studio"
+    },
+    {
+      "repo": "AsterionEDA",
+      "title": "Asterion EDA",
+      "description": "Electronic design automation and circuit design workbench",
+      "category": "cad",
+      "createdAt": "2026-09-08T17:12:53Z",
+      "url": "https://wieslawsoltes.github.io/AsterionEDA/",
+      "documentTitle": "Asterion EDA · Aurora Sensor Hub"
     },
     {
       "repo": "AetherDiscovery",
@@ -558,6 +567,15 @@
       "documentTitle": "Nexora Diagram"
     },
     {
+      "repo": "VeyraWorkspace",
+      "title": "Veyra Workspace",
+      "description": "Collaboration workspace with chat, meetings, shared notes and a WebGPU whiteboard",
+      "category": "office",
+      "createdAt": "2026-09-08T13:59:54Z",
+      "url": "https://wieslawsoltes.github.io/VeyraWorkspace/",
+      "documentTitle": "Veyra · Your space to work together"
+    },
+    {
       "repo": "ForgeStudio",
       "title": "ForgeStudio",
       "description": "Code editing and development environment",
@@ -674,7 +692,8 @@
       "url": "https://wieslawsoltes.github.io/VantaForge/",
       "documentTitle": "Vanta Forge — Aether Relay"
     }
-  ]
+  ],
+  "updatedAt": "2026-09-08T18:59:25.060008+00:00"
 };
     for (const app of data.apps) {
         app.id = 'web-' + app.repo.toLowerCase();

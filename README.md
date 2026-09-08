@@ -31,7 +31,9 @@ Multitasking. Recovery and Accessibility share that same Settings window.
 without launching a separate recorder. **Explorer** browses ZIP contents in its
 tabs, extracts in place, and exposes Previous versions in File Properties.
 The Start menu has a persistent pinned grid and searchable system destinations;
-the 67 categorized web apps remain unchanged.
+the categorized web-app collection remain available. The collection now contains
+69 apps, including Veyra Workspace (Office & Productivity) and Asterion EDA
+(CAD & Manufacturing).
 
 Original Fluent-inspired material layers, title bars, taskbar sizing, spacing,
 context menus, breadcrumbs and light/dark/mobile layouts unify these surfaces.

@@ -1,6 +1,6 @@
 # Your web apps in Aster
 
-Open **Start → Your web apps → a category → an app**. All 67 reviewed external
+Open **Start → Your web apps → a category → an app**. All 69 reviewed external
 projects have an entry. Search by app name, repository name, purpose or category
 from the normal Start search field. Category submenus have Back navigation,
 keyboard controls and a single-column touch layout on narrow screens.
@@ -22,7 +22,10 @@ This correctly includes Vellum, which was created just after midnight locally
 but still on September 5 in UTC. It is a reviewed snapshot, not a claim that
 future repositories will be discovered automatically.
 
-68 candidate repositories were found; 67 external apps are included. **Aster
+The original audit found 68 candidate repositories and included 67 external apps.
+Veyra Workspace and Asterion EDA were subsequently added at the owner's request,
+bringing the reviewed inventory to 70 repositories and the collection to 69 apps.
+Their individual audit timestamps and live response evidence are retained. **Aster
 itself is intentionally excluded**, rather than recursively embedding the host
 desktop. No other candidate was dropped. Every app's deployed entry point returned
 HTTP 200 with HTML during the audit. Readmes and deployed pages were inspected
@@ -40,21 +43,34 @@ The catalog does not contact GitHub or preload any remote site when Aster starts
 | --- | ---: |
 | Design & Graphics | 8 |
 | 3D & Animation | 7 |
-| CAD & Manufacturing | 7 |
+| CAD & Manufacturing | 8 |
 | Science & Simulation | 9 |
 | Process & Automation | 10 |
 | Buildings & Maps | 5 |
-| Office & Productivity | 8 |
+| Office & Productivity | 9 |
 | Development & Data | 6 |
 | Audio & Video | 4 |
 | Games | 3 |
+
+## Requested additions
+
+- **Veyra Workspace**: Office & Productivity. Local collaboration workspace,
+  notes, meetings and whiteboard. Camera, microphone and screen sharing are
+  delegated to its iframe but still require browser permission. Static Pages
+  hosting does not supply Veyra's optional live collaboration server.
+- **Asterion EDA**: CAD & Manufacturing. Electronic design automation workbench.
+  Its frame does not receive camera, microphone or screen-capture delegation.
+
+Both are searchable by their spaced app titles and repository names. They use
+Aster's existing window controls, taskbar entries, Reload, Source and Open in
+browser actions. Launching either site does not preload the other one.
 
 ## Hosting, permissions and trust
 
 These are independently hosted applications, not copies bundled with Aster and
 not Windows EXEs. The existing browser-only Win32 runtime remains separate.
 Loading an app needs its live site or that app's own offline cache. The standalone
-Aster HTML embeds the catalog and window host, **not all 67 application payloads**.
+Aster HTML embeds the catalog and window host, **not all 69 application payloads**.
 
 All catalog entries are fixed HTTPS URLs on `wieslawsoltes.github.io`. The host
 rejects arbitrary schemes, origins, credentials, query strings and altered launch
@@ -68,7 +84,7 @@ sandbox is not an isolation boundary between them.** A genuinely untrusted app
 needs a separate origin and a different, restricted integration design.
 
 Clipboard, fullscreen and media autoplay permissions are delegated to the frame,
-not automatically granted by Aster. Recording apps additionally receive camera,
+not automatically granted by Aster. Recording and collaboration/calling apps additionally receive camera,
 microphone and screen-capture delegation; mapping apps may request geolocation.
 The browser still decides whether to prompt or allow each operation. Local folder
 pickers, sign-in, popups, WebGPU and capture can depend on the browser and embedding

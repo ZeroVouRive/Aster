@@ -15,9 +15,9 @@ function register(c = catalog) {
     return {apps, OS};
 }
 test('Every audited web project appears exactly once; only Aster itself is excluded', () => {
-    assert.equal(inventory.repositories.length, 68);
-    assert.equal(catalog.apps.length, 67);
-    assert.equal(new Set(catalog.apps.map(a => a.id)).size, 67);
+    assert.equal(inventory.repositories.length, 70);
+    assert.equal(catalog.apps.length, 69);
+    assert.equal(new Set(catalog.apps.map(a => a.id)).size, 69);
     assert.deepEqual(catalog.apps.map(a => a.repo).sort(), inventory.repositories.filter(r => r.included).map(r => r.name).sort());
     assert.deepEqual(inventory.repositories.filter(r => !r.included).map(r => r.name), ['Aster']);
 });
@@ -54,7 +54,7 @@ test('Catalog objects and collections are immutable', () => {
 });
 test('All projects register real mounts without DOM, network or eager iframe creation', () => {
     const {apps} = register();
-    assert.equal(apps.size, 67);
+    assert.equal(apps.size, 69);
     for (const [id, app] of apps) {
         assert.equal(app.webApp, true); assert.equal(typeof app.mount, 'function');
         assert(app.category && app.keywords && app.icon && app.color);
@@ -76,4 +76,21 @@ test('Static and standalone loaders include catalog before launcher and shell', 
     const standalone = fs.readFileSync(root + '/Aster.html', 'utf8');
     assert(!standalone.includes('<script src="src/apps-web.js"'));
     assert(standalone.includes('OS.renderWebAppStart') && standalone.includes('w.webFrame = next'));
+});
+
+test('Requested Veyra Workspace and Asterion EDA entries keep their category and media scope', () => {
+    const {apps} = register();
+    for (const [repo, title, category] of [
+        ['VeyraWorkspace', 'Veyra Workspace', 'office'],
+        ['AsterionEDA', 'Asterion EDA', 'cad']
+    ]) {
+        const app = catalog.apps.find(a => a.repo === repo);
+        assert(app); assert.equal(app.title, title); assert.equal(app.category, category);
+        assert.equal(app.id, 'web-' + repo.toLowerCase());
+        assert.equal(apps.get(app.id).webApp, true);
+        assert(apps.get(app.id).keywords.includes(repo));
+    }
+    const permitted = launcher.match(/const recordingApps = new Set\(\[([^\]]+)\]\)/)[1];
+    assert(permitted.includes("'VeyraWorkspace'"));
+    assert(!permitted.includes("'AsterionEDA'"));
 });
