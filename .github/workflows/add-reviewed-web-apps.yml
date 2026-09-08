@@ -113,7 +113,7 @@ jobs:
                               page.screenshot(path=str(out/(repo+'-host-fixture.png')))
                           close_all();return 'Both requested apps have categorized/searchable entries, canonical frames, titlebars and scoped media delegation'
                       check('Requested apps launch from Start with correct chrome and permissions',requested_apps)
-                      def standalone():'''.replace('\n          ','\n'))
+                      def standalone():''')
           edit('docs/web-apps.md','All 67 reviewed external','All 69 reviewed external')
           edit('docs/web-apps.md','**not all 67 application payloads**','**not all 69 application payloads**')
           edit('docs/web-apps.md','68 candidate repositories were found; 67 external apps are included. **Aster','The original audit found 68 candidate repositories and included 67 external apps.\nVeyra Workspace and Asterion EDA were subsequently added at the owner\'s request,\nbringing the reviewed inventory to 70 repositories and the collection to 69 apps.\nTheir individual audit timestamps and live response evidence are retained. **Aster')
