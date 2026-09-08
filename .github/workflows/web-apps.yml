@@ -44,7 +44,7 @@ jobs:
           python3 -m playwright install --with-deps chromium
       - name: Verify host mechanics using explicit inert iframe fixtures
         run: python3 tests/web-apps/browser.py
-      - name: Launch all 67 real deployed applications in Aster windows
+      - name: Launch all reviewed deployed applications in Aster windows
         run: xvfb-run -a -s '-screen 0 1440x1000x24' python3 tests/web-apps/browser.py --live --gpu --headed
       - name: Retain evidence, screenshots and exact tested source
         if: always()
