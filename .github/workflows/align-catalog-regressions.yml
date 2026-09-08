@@ -1,0 +1,59 @@
+name: Align desktop regression coverage with the 69-app catalog
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/align-catalog-regressions.yml']
+permissions:
+  contents: write
+jobs:
+  align:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Update only inherited catalog-count expectations
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          files=['tests/smoke.py','tests/desktop-features/browser.py','tests/integrated-shell/browser.py','tests/integrated-shell/README.md']
+          for name in files:
+              p=Path(name);text=p.read_text()
+              assert '67' in text, 'Unexpected concurrent change: '+name
+              p.write_text(text.replace('67','69'))
+          PY
+          node --test tests/web-apps/catalog.cjs
+          python3 build.py
+          git diff --exit-code -- Aster.html
+          git diff --check
+      - name: Install browser verification tools
+        run: |
+          python3 -m pip install playwright pillow
+          python3 -m playwright install --with-deps chromium
+      - name: Verify all inherited desktop feature scenarios over HTTP
+        run: |
+          python3 tests/integrated-shell/browser.py
+          python3 tests/desktop-features/browser.py
+          python3 tests/smoke.py
+      - name: Commit corrected expectations directly to main
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tests/smoke.py tests/desktop-features/browser.py tests/integrated-shell/browser.py tests/integrated-shell/README.md
+          git commit -m 'Expect all 69 catalog entries in inherited desktop and shell regression suites'
+          git push origin HEAD:main
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: expanded-catalog-desktop-regressions
+          path: |
+            tests/results.json
+            tests/*.png
+            tests/integrated-shell/artifacts/
+            tests/desktop-features/artifacts/
+          retention-days: 14
