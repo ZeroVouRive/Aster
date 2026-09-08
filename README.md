@@ -32,8 +32,9 @@ without launching a separate recorder. **Explorer** browses ZIP contents in its
 tabs, extracts in place, and exposes Previous versions in File Properties.
 The Start menu has a persistent pinned grid and searchable system destinations;
 the categorized web-app collection remain available. The collection now contains
-69 apps, including Veyra Workspace (Office & Productivity) and Asterion EDA
-(CAD & Manufacturing).
+74 apps, including Veyra Workspace, Asterion EDA, TwinForge, Branchglass,
+Notepad XP, Formalyth and Jailbreak. Open **Start → Your web apps** or search by
+app or repository name; see [the categorized collection](docs/web-apps.md).
 
 Original Fluent-inspired material layers, title bars, taskbar sizing, spacing,
 context menus, breadcrumbs and light/dark/mobile layouts unify these surfaces.

@@ -425,6 +425,29 @@
       ]
     },
     {
+      "name": "Branchglass",
+      "createdAt": "2026-09-08T18:51:04Z",
+      "createdLocal": "2026-09-08T20:51:04+02:00",
+      "repository": "https://github.com/wieslawsoltes/Branchglass",
+      "readmeSHA": "7d0c465c533ac3103a4c2bc917ce0441db5b5272",
+      "included": true,
+      "reason": "Explicitly requested by the owner; public browser application with a deployed HTML entry point.",
+      "auditedAt": "2026-09-08T20:16:49.948538+00:00",
+      "deployments": [
+        {
+          "requestedUrl": "https://wieslawsoltes.github.io/Branchglass/",
+          "status": 200,
+          "finalUrl": "https://wieslawsoltes.github.io/Branchglass/",
+          "headers": {
+            "content-type": "text/html; charset=utf-8"
+          },
+          "bytes": 6554,
+          "sha256": "1629f2fac0fbd5324fd6ae5431b395ea107ab68d059f84265c9dd2ee1caa52b2",
+          "title": "Branchglass — Your code, in perspective"
+        }
+      ]
+    },
+    {
       "name": "CelestaStudio",
       "createdAt": "2026-09-06T19:54:48Z",
       "createdLocal": "2026-09-06T21:54:48+02:00",
@@ -513,28 +536,6 @@
       ]
     },
     {
-      "name": "FluxWorksStudio",
-      "createdAt": "2026-09-06T20:54:15Z",
-      "createdLocal": "2026-09-06T22:54:15+02:00",
-      "repository": "https://github.com/wieslawsoltes/FluxWorksStudio",
-      "readmeSHA": "42c88b16158df35b809920d830328a63c845671e",
-      "included": true,
-      "reason": "Public browser application with a deployed HTML entry point.",
-      "deployments": [
-        {
-          "requestedUrl": "https://wieslawsoltes.github.io/FluxWorksStudio/",
-          "status": 200,
-          "finalUrl": "https://wieslawsoltes.github.io/FluxWorksStudio/",
-          "headers": {
-            "content-type": "text/html; charset=utf-8"
-          },
-          "bytes": 9728,
-          "sha256": "51bacceb97b44a9ea39a67d0ba83b14ff7c7127f30849c756fd65118e0f35ddf",
-          "title": "FluxWorks Studio · Simulation workbench"
-        }
-      ]
-    },
-    {
       "name": "Fluxweave",
       "createdAt": "2026-09-06T20:57:45Z",
       "createdLocal": "2026-09-06T22:57:45+02:00",
@@ -553,6 +554,28 @@
           "bytes": 13595,
           "sha256": "625a9f451848ff5def9d9b7ed7af451043fdda6011a05a38ec8465b83cdb3932",
           "title": "Fluxweave · Visual programming"
+        }
+      ]
+    },
+    {
+      "name": "FluxWorksStudio",
+      "createdAt": "2026-09-06T20:54:15Z",
+      "createdLocal": "2026-09-06T22:54:15+02:00",
+      "repository": "https://github.com/wieslawsoltes/FluxWorksStudio",
+      "readmeSHA": "42c88b16158df35b809920d830328a63c845671e",
+      "included": true,
+      "reason": "Public browser application with a deployed HTML entry point.",
+      "deployments": [
+        {
+          "requestedUrl": "https://wieslawsoltes.github.io/FluxWorksStudio/",
+          "status": 200,
+          "finalUrl": "https://wieslawsoltes.github.io/FluxWorksStudio/",
+          "headers": {
+            "content-type": "text/html; charset=utf-8"
+          },
+          "bytes": 9728,
+          "sha256": "51bacceb97b44a9ea39a67d0ba83b14ff7c7127f30849c756fd65118e0f35ddf",
+          "title": "FluxWorks Studio · Simulation workbench"
         }
       ]
     },
@@ -645,6 +668,29 @@
       ]
     },
     {
+      "name": "Formalyth",
+      "createdAt": "2026-09-08T10:22:23Z",
+      "createdLocal": "2026-09-08T12:22:23+02:00",
+      "repository": "https://github.com/wieslawsoltes/Formalyth",
+      "readmeSHA": "c1bb8ef03ddfe0cea1c58f2e795607cf5d674d61",
+      "included": true,
+      "reason": "Explicitly requested by the owner; public browser application with a deployed HTML entry point.",
+      "auditedAt": "2026-09-08T20:16:49.948538+00:00",
+      "deployments": [
+        {
+          "requestedUrl": "https://wieslawsoltes.github.io/Formalyth/",
+          "status": 200,
+          "finalUrl": "https://wieslawsoltes.github.io/Formalyth/",
+          "headers": {
+            "content-type": "text/html; charset=utf-8"
+          },
+          "bytes": 652,
+          "sha256": "b51b531623f25109f04e6a3bf3176ed04682638e9e71a84e9db4fb9e5d97f59a",
+          "title": "Formalyth — Design & Manufacturing"
+        }
+      ]
+    },
+    {
       "name": "Frameforge",
       "createdAt": "2026-09-07T10:19:57Z",
       "createdLocal": "2026-09-07T12:19:57+02:00",
@@ -685,6 +731,29 @@
           "bytes": 233169,
           "sha256": "31aa5e1ed31ba6e428ffd86c7ed4c734b71b3589d89a8f5d909b68e037c2d6de",
           "title": "Gridline — A clearer way to work"
+        }
+      ]
+    },
+    {
+      "name": "Jailbreak",
+      "createdAt": "2026-09-08T11:00:35Z",
+      "createdLocal": "2026-09-08T13:00:35+02:00",
+      "repository": "https://github.com/wieslawsoltes/Jailbreak",
+      "readmeSHA": "0eb6d775ae6161e558a4d1a717dd93faab70a85b",
+      "included": true,
+      "reason": "Explicitly requested by the owner; public browser application with a deployed HTML entry point.",
+      "auditedAt": "2026-09-08T20:16:49.948538+00:00",
+      "deployments": [
+        {
+          "requestedUrl": "https://wieslawsoltes.github.io/Jailbreak/",
+          "status": 200,
+          "finalUrl": "https://wieslawsoltes.github.io/Jailbreak/",
+          "headers": {
+            "content-type": "text/html; charset=utf-8"
+          },
+          "bytes": 812909,
+          "sha256": "e1a5266e8fff5df50c95d70d465aaab99b383c0a11aecc25200ef85e9ddc78e6",
+          "title": "Jailbreak · Browser workbench"
         }
       ]
     },
@@ -927,6 +996,29 @@
           "bytes": 185045,
           "sha256": "b7d80384ed643cff43fa782b1de78797bdefde241e9793cc2094fe791943573c",
           "title": "Nexora Engineering · Plant intelligence, connected."
+        }
+      ]
+    },
+    {
+      "name": "NotepadXP",
+      "createdAt": "2026-09-08T09:16:03Z",
+      "createdLocal": "2026-09-08T11:16:03+02:00",
+      "repository": "https://github.com/wieslawsoltes/NotepadXP",
+      "readmeSHA": "961da2f93f1a317ce0d0aeed591fa6ea042a2da7",
+      "included": true,
+      "reason": "Explicitly requested by the owner; public browser application with a deployed HTML entry point.",
+      "auditedAt": "2026-09-08T20:16:49.948538+00:00",
+      "deployments": [
+        {
+          "requestedUrl": "https://wieslawsoltes.github.io/NotepadXP/",
+          "status": 200,
+          "finalUrl": "https://wieslawsoltes.github.io/NotepadXP/",
+          "headers": {
+            "content-type": "text/html; charset=utf-8"
+          },
+          "bytes": 3201,
+          "sha256": "e52a69c551e40b10ec8b74b2f05e62f7f0f6a95bd425315dff12b673593664cd",
+          "title": "Untitled - Notepad"
         }
       ]
     },
@@ -1327,6 +1419,29 @@
       ]
     },
     {
+      "name": "TwinForge",
+      "createdAt": "2026-09-08T18:50:37Z",
+      "createdLocal": "2026-09-08T20:50:37+02:00",
+      "repository": "https://github.com/wieslawsoltes/TwinForge",
+      "readmeSHA": "6db4cccb0e4af8cb4327bead4353776199bed434",
+      "included": true,
+      "reason": "Explicitly requested by the owner; public browser application with a deployed HTML entry point.",
+      "auditedAt": "2026-09-08T20:16:49.948538+00:00",
+      "deployments": [
+        {
+          "requestedUrl": "https://wieslawsoltes.github.io/TwinForge/",
+          "status": 200,
+          "finalUrl": "https://wieslawsoltes.github.io/TwinForge/",
+          "headers": {
+            "content-type": "text/html; charset=utf-8"
+          },
+          "bytes": 181339,
+          "sha256": "4500f74c6bbd142a7dd42589c56cc31e8b0b3af6c32e112714ea7572ed82ac87",
+          "title": "TwinForge — Dual-pane file manager"
+        }
+      ]
+    },
+    {
       "name": "VantaForge",
       "createdAt": "2026-09-06T20:43:24Z",
       "createdLocal": "2026-09-06T22:43:24+02:00",
@@ -1548,5 +1663,5 @@
       ]
     }
   ],
-  "updatedAt": "2026-09-08T18:59:25.060008+00:00"
+  "updatedAt": "2026-09-08T20:16:49.948538+00:00"
 }

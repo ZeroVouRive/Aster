@@ -1,6 +1,6 @@
 # Your web apps in Aster
 
-Open **Start → Your web apps → a category → an app**. All 69 reviewed external
+Open **Start → Your web apps → a category → an app**. All 74 reviewed external
 projects have an entry. Search by app name, repository name, purpose or category
 from the normal Start search field. Category submenus have Back navigation,
 keyboard controls and a single-column touch layout on narrow screens.
@@ -24,7 +24,8 @@ future repositories will be discovered automatically.
 
 The original audit found 68 candidate repositories and included 67 external apps.
 Veyra Workspace and Asterion EDA were subsequently added at the owner's request,
-bringing the reviewed inventory to 70 repositories and the collection to 69 apps.
+followed by TwinForge, Branchglass, Notepad XP, Formalyth and Jailbreak.
+The reviewed inventory now contains 75 repositories and the collection 74 apps.
 Their individual audit timestamps and live response evidence are retained. **Aster
 itself is intentionally excluded**, rather than recursively embedding the host
 desktop. No other candidate was dropped. Every app's deployed entry point returned
@@ -43,12 +44,12 @@ The catalog does not contact GitHub or preload any remote site when Aster starts
 | --- | ---: |
 | Design & Graphics | 8 |
 | 3D & Animation | 7 |
-| CAD & Manufacturing | 8 |
+| CAD & Manufacturing | 9 |
 | Science & Simulation | 9 |
 | Process & Automation | 10 |
 | Buildings & Maps | 5 |
-| Office & Productivity | 9 |
-| Development & Data | 6 |
+| Office & Productivity | 11 |
+| Development & Data | 8 |
 | Audio & Video | 4 |
 | Games | 3 |
 
@@ -61,16 +62,29 @@ The catalog does not contact GitHub or preload any remote site when Aster starts
 - **Asterion EDA**: CAD & Manufacturing. Electronic design automation workbench.
   Its frame does not receive camera, microphone or screen-capture delegation.
 
-Both are searchable by their spaced app titles and repository names. They use
+- **TwinForge**: Office & Productivity. Dual-pane file management and archives.
+- **Notepad XP** (`NotepadXP`): Office & Productivity. Classic plain-text editor.
+- **Branchglass**: Development & Data. Git history, branches, staging and diffs.
+  Its Pages application starts in sandbox mode; the optional native Git backend
+  is not installed, connected or supplied by Aster.
+- **Jailbreak**: Development & Data. C#, XAML and MSIL compiler toolchain and IDE;
+  it is not a game or a device-jailbreaking tool.
+- **Formalyth**: CAD & Manufacturing. Design and manufacturing workbench.
+
+None of these five additions receives camera, microphone, screen-capture or
+geolocation delegation. Native folder dialogs and other host-reserved features
+may require **Open in browser**; Aster does not bypass browser restrictions.
+
+All entries are searchable by their app titles and repository names. They use
 Aster's existing window controls, taskbar entries, Reload, Source and Open in
-browser actions. Launching either site does not preload the other one.
+browser actions. Launching an app does not preload the other sites.
 
 ## Hosting, permissions and trust
 
 These are independently hosted applications, not copies bundled with Aster and
 not Windows EXEs. The existing browser-only Win32 runtime remains separate.
 Loading an app needs its live site or that app's own offline cache. The standalone
-Aster HTML embeds the catalog and window host, **not all 69 application payloads**.
+Aster HTML embeds the catalog and window host, **not all 74 application payloads**.
 
 All catalog entries are fixed HTTPS URLs on `wieslawsoltes.github.io`. The host
 rejects arbitrary schemes, origins, credentials, query strings and altered launch

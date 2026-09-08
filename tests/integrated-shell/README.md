@@ -34,5 +34,5 @@ after closing Snips must also terminate. The physical user permission chooser,
 system audio, audible local speech and host-reserved shortcuts are not automated.
 
 The inherited desktop-essentials, web-apps and Win32/native workflows continue to
-run and provide storage migration, ZIP interoperability, 69 deployed app startup,
+run and provide storage migration, ZIP interoperability, 74 deployed app startup,
 WebGPU pixel checks and executable regression coverage.

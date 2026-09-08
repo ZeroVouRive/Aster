@@ -15,9 +15,9 @@ function register(c = catalog) {
     return {apps, OS};
 }
 test('Every audited web project appears exactly once; only Aster itself is excluded', () => {
-    assert.equal(inventory.repositories.length, 70);
-    assert.equal(catalog.apps.length, 69);
-    assert.equal(new Set(catalog.apps.map(a => a.id)).size, 69);
+    assert.equal(inventory.repositories.length, 75);
+    assert.equal(catalog.apps.length, 74);
+    assert.equal(new Set(catalog.apps.map(a => a.id)).size, 74);
     assert.deepEqual(catalog.apps.map(a => a.repo).sort(), inventory.repositories.filter(r => r.included).map(r => r.name).sort());
     assert.deepEqual(inventory.repositories.filter(r => !r.included).map(r => r.name), ['Aster']);
 });
@@ -54,7 +54,7 @@ test('Catalog objects and collections are immutable', () => {
 });
 test('All projects register real mounts without DOM, network or eager iframe creation', () => {
     const {apps} = register();
-    assert.equal(apps.size, 69);
+    assert.equal(apps.size, 74);
     for (const [id, app] of apps) {
         assert.equal(app.webApp, true); assert.equal(typeof app.mount, 'function');
         assert(app.category && app.keywords && app.icon && app.color);
@@ -93,4 +93,28 @@ test('Requested Veyra Workspace and Asterion EDA entries keep their category and
     const permitted = launcher.match(/const recordingApps = new Set\(\[([^\]]+)\]\)/)[1];
     assert(permitted.includes("'VeyraWorkspace'"));
     assert(!permitted.includes("'AsterionEDA'"));
+});
+
+
+test('The five requested tools are unique, categorized and searchable without added media access', () => {
+    const {apps} = register();
+    const requested = [
+        ['TwinForge', 'TwinForge', 'office'],
+        ['Branchglass', 'Branchglass', 'development'],
+        ['NotepadXP', 'Notepad XP', 'office'],
+        ['Formalyth', 'Formalyth', 'cad'],
+        ['Jailbreak', 'Jailbreak', 'development']
+    ];
+    const permitted = launcher.match(/const recordingApps = new Set\(\[([^\]]+)\]\)/)[1];
+    for (const [repo, title, category] of requested) {
+        const matches = catalog.apps.filter(a => a.repo === repo);
+        assert.equal(matches.length, 1);
+        const app = matches[0];
+        assert.equal(app.title, title); assert.equal(app.category, category);
+        assert.equal(app.id, 'web-' + repo.toLowerCase());
+        const registered = apps.get(app.id);
+        assert.equal(registered.webApp, true);
+        assert(registered.keywords.includes(repo));
+        assert(!permitted.includes("'" + repo + "'"));
+    }
 });

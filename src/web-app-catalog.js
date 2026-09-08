@@ -279,6 +279,15 @@
       "documentTitle": "Asterion EDA · Aurora Sensor Hub"
     },
     {
+      "repo": "Formalyth",
+      "title": "Formalyth",
+      "description": "Parametric CAD design and manufacturing workbench",
+      "category": "cad",
+      "createdAt": "2026-09-08T10:22:23Z",
+      "url": "https://wieslawsoltes.github.io/Formalyth/",
+      "documentTitle": "Formalyth — Design & Manufacturing"
+    },
+    {
       "repo": "AetherDiscovery",
       "title": "AetherDiscovery",
       "description": "3D engineering exploration and finite elements",
@@ -576,6 +585,24 @@
       "documentTitle": "Veyra · Your space to work together"
     },
     {
+      "repo": "TwinForge",
+      "title": "TwinForge",
+      "description": "Dual-pane file manager with tabs, archives and permission-based local-folder access",
+      "category": "office",
+      "createdAt": "2026-09-08T18:50:37Z",
+      "url": "https://wieslawsoltes.github.io/TwinForge/",
+      "documentTitle": "TwinForge — Dual-pane file manager"
+    },
+    {
+      "repo": "NotepadXP",
+      "title": "Notepad XP",
+      "description": "Classic plain-text editor with find, replace, encodings and WebGPU text rendering",
+      "category": "office",
+      "createdAt": "2026-09-08T09:16:03Z",
+      "url": "https://wieslawsoltes.github.io/NotepadXP/",
+      "documentTitle": "Untitled - Notepad"
+    },
+    {
       "repo": "ForgeStudio",
       "title": "ForgeStudio",
       "description": "Code editing and development environment",
@@ -628,6 +655,24 @@
       "createdAt": "2026-09-06T21:43:02Z",
       "url": "https://wieslawsoltes.github.io/AureonTerminal/",
       "documentTitle": "Aureon Terminal — Market workspace"
+    },
+    {
+      "repo": "Branchglass",
+      "title": "Branchglass",
+      "description": "Git workspace with commit history, branches, staging and diffs",
+      "category": "development",
+      "createdAt": "2026-09-08T18:51:04Z",
+      "url": "https://wieslawsoltes.github.io/Branchglass/",
+      "documentTitle": "Branchglass — Your code, in perspective"
+    },
+    {
+      "repo": "Jailbreak",
+      "title": "Jailbreak",
+      "description": "C#, XAML and MSIL to JavaScript compilers with a browser IDE",
+      "category": "development",
+      "createdAt": "2026-09-08T11:00:35Z",
+      "url": "https://wieslawsoltes.github.io/Jailbreak/",
+      "documentTitle": "Jailbreak · Browser workbench"
     },
     {
       "repo": "Frameforge",
@@ -693,7 +738,7 @@
       "documentTitle": "Vanta Forge — Aether Relay"
     }
   ],
-  "updatedAt": "2026-09-08T18:59:25.060008+00:00"
+  "updatedAt": "2026-09-08T20:16:49.948538+00:00"
 };
     for (const app of data.apps) {
         app.id = 'web-' + app.repo.toLowerCase();
