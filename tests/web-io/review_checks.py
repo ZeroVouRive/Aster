@@ -55,7 +55,7 @@ def run(page, ctx, js, picker, frame, done, check, args, root, origin):
         js("await OS.webIO.update('io-fixture','write',null);")
     check('Portal: independent write switch retains reads but denies mutation',write_policy)
     def private_paths():
-        js("await OS.fs.mkdir('/Documents/App storage');await OS.fs.mkdir('/Documents/App storage/foreign-app');await OS.fs.write('/Documents/App storage/foreign-app/private.txt','private');")
+        js("if(!await OS.fs.stat('/Documents/App storage'))await OS.fs.mkdir('/Documents/App storage');assert((await OS.fs.stat('/Documents/App storage')).kind==='directory');await OS.fs.mkdir('/Documents/App storage/foreign-app');await OS.fs.write('/Documents/App storage/foreign-app/private.txt','private');")
         frame.locator('#open').click();d=picker(folder='/Documents');assert not d.locator('[data-io-path="/Documents/App storage"]').count()
         d.get_by_label('Aster folder',exact=True).fill('/Documents/App storage/foreign-app');d.get_by_role('button',name='Go',exact=True).click();page.wait_for_function('document.querySelector(".io-picker-status").textContent.includes("not a public file scope")');d.get_by_role('button',name='Cancel',exact=True).click();assert done()['error']['name']=='AbortError'
         frame.locator('#folder').click();d=picker('Choose Aster folder','/Documents');d.get_by_role('button',name='Select folder',exact=True).click();assert not done()['error']
