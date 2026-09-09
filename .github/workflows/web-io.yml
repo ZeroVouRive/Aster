@@ -1,10 +1,10 @@
 name: Web app file integration — pickers, permissions and real transfers
 on:
   pull_request:
-    paths: ['src/**', 'tests/**', 'index.html', 'Aster.html', 'build.py', 'sw.js', '.github/workflows/web-io.yml']
+    paths: ['sdk/**', 'src/**', 'tests/**', 'index.html', 'Aster.html', 'build.py', 'sw.js', '.github/workflows/web-io.yml']
   push:
     branches: [main]
-    paths: ['src/**', 'tests/web-io/**', 'index.html', 'Aster.html', 'sw.js', '.github/workflows/web-io.yml']
+    paths: ['sdk/**', 'src/**', 'tests/web-io/**', 'index.html', 'Aster.html', 'sw.js', '.github/workflows/web-io.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -29,7 +29,8 @@ jobs:
           python -m py_compile tests/web-io/*.py
           node --test tests/web-io/models.cjs
           python build.py
-          git diff --exit-code -- Aster.html
+          git diff --exit-code -- Aster.html sdk/aster-files.js
+          cmp sdk/aster-files.js src/web-io-client.js
           git diff --check
       - name: Install test browser
         run: |

@@ -314,3 +314,5 @@ Aster's branding, wallpaper, icons, sample artwork, and sample audio are origina
 Explorer now integrates atomic copy/move conflicts, multi-item rename previews,
 session undo/redo, transactional imports and cancellable preparation progress.
 See [file workflows](docs/file-workflows.md) for limits and verification.
+
+File integration source reconciliation, pending saves, SDK publication and review fixes: [merge audit](docs/file-integration-reconciliation.md). The final connection and browser limitations are in [Web Files](docs/web-files.md).

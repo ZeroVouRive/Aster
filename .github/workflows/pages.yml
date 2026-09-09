@@ -34,7 +34,7 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html Aster.html manifest.webmanifest sw.js LICENSE _site/
-          cp -R src assets third-party _site/
+          cp -R sdk src assets third-party _site/
           touch _site/.nojekyll
           python3 - <<'PY'
           import hashlib, json, os

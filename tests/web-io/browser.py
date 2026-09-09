@@ -17,7 +17,7 @@ def main(args):
  report={'mode':'injected memory' if args.inject else 'standalone' if args.standalone else 'HTTP/IndexedDB','engine':args.engine,'checks':[],'errors':[]}
  with sync_playwright() as p:
   browser=getattr(p,args.engine).launch(headless=True,executable_path=args.browser or None,args=['--no-sandbox'] if args.engine=='chromium' else [])
-  ctx=browser.new_context(viewport={'width':1440,'height':1000},accept_downloads=True,service_workers='allow');page=ctx.new_page();page.set_default_timeout(12000);page.on('pageerror',lambda e:report['errors'].append(str(e)))
+  ctx=browser.new_context(viewport={'width':1440,'height':1000},accept_downloads=True,service_workers='allow');ctx.add_init_script("window.ioHandshake=[];addEventListener('message',e=>{if(e.data?.type?.startsWith('aster-io-')&&ioHandshake.length<12)ioHandshake.push({type:e.data.type,origin:e.origin,parent:e.source===parent,ports:e.ports.length});});");page=ctx.new_page();page.set_default_timeout(12000);page.on('pageerror',lambda e:report['errors'].append(str(e)))
   def js(text,arg=None):return page.evaluate('async arg=>{const OS=Aster;const assert=(x,m="Assertion failed")=>{if(!x)throw Error(m);};'+text+'}',arg)
   def check(name,fn):
    start=time.monotonic()
@@ -33,6 +33,7 @@ def main(args):
    js("await OS.fs.mkdir('/Documents/IO');await OS.fs.write('/Documents/IO/a.txt','Unicode żółć 日本語 🧪');await OS.fs.write('/Documents/IO/b.bin',new Blob([new Uint8Array([0,255,128,1])]));await OS.fs.mkdir('/Documents/IO/sub');await OS.fs.write('/Documents/IO/sub/c.txt','child');await OS.fs.write('/Documents/io-fixture.html',arg,'text/html');OS.registerCustom({id:'io-fixture',title:'File API fixture',path:'/Documents/io-fixture.html'});window.iow=OS.openApp('io-fixture');await iow.ready;",(ROOT/'tests/web-io/fixture.html').read_text())
    page.wait_for_function('Aster.webIO.sessions.some(s=>s.app==="io-fixture"&&s.state==="connected")');frame=page.locator('.app-frame').element_handle().content_frame();frame.wait_for_function('window.AsterFiles?.connected')
    def opening():
+    assert frame.evaluate('ASTER_FILE_HOST_ORIGINS')==[page.evaluate('window.origin')]
     frame.locator('#open').click();d=picker();d.locator('[data-io-path="/Documents/IO/a.txt"]').click();page.screenshot(path=str(out/'aster-open-picker.png'));d.get_by_role('button',name='Open',exact=True).click();r=done();assert r['error'] is None,r;assert r['result']['text']=='Unicode żółć 日本語 🧪';assert frame.evaluate('(()=>{try{return !parent.Aster}catch(e){return e.name==="SecurityError"}})()')
    check('Opaque sandbox gets real selected bytes without access to the parent desktop',opening)
    def multiple():
@@ -90,7 +91,7 @@ def main(args):
     return 'Direct broker security test: an untrusted remote release cannot import until the actual host confirmation is accepted'
    check('Remote pointer reports require an independent host confirmation and respect Cancel',remoteconfirmation)
    def explorerDrop():
-    js('document.querySelector(".file-operation-panel header button")?.click();');source=page.locator('.file-row[data-path="/Documents/IO/b.bin"]');source.scroll_into_view_if_needed();b=source.bounding_box();t=frame.locator('#drop').bounding_box();page.mouse.move(b['x']+70,b['y']+10);page.mouse.down();page.mouse.move(t['x']+40,t['y']+20,steps=30);page.mouse.up();frame.wait_for_function('window.dropped?.some(f=>f.name==="b.bin")');assert frame.evaluate('dropped.find(f=>f.name==="b.bin").bytes')==[0,255,128,1]
+    js('document.querySelector(".file-operation-panel header button")?.click();');source=page.locator('.file-row[data-path="/Documents/IO/b.bin"]');source.click(trial=True);b=source.bounding_box();t=frame.locator('#drop').bounding_box();page.mouse.move(b['x']+70,b['y']+10);page.mouse.down();page.mouse.move(t['x']+40,t['y']+20,steps=30);page.mouse.up();frame.wait_for_function('window.dropped?.some(f=>f.name==="b.bin")');assert frame.evaluate('dropped.find(f=>f.name==="b.bin").bytes')==[0,255,128,1]
    check('Actual pointer drag from Explorer into the isolated app delivers real File data',explorerDrop)
    def settingsui():
     js("await explorer.close(true);await iow.minimize();window.settingsWindow=OS.openApp('settings',{section:'webfiles'});await settingsWindow.ready;");panel=page.locator('.window[data-app="settings"]');panel.get_by_label('File integration app',exact=True).select_option('io-fixture');panel.get_by_label('Save and write access',exact=True).select_option('false');page.wait_for_function('Aster.webIO.settings.apps["io-fixture"].save===false');assert panel.get_by_text('connected',exact=False).count()>0;page.screenshot(path=str(out/'file-integration-settings.png'));panel.get_by_label('Save and write access',exact=True).select_option('inherit');page.wait_for_function('Aster.webIO.settings.apps["io-fixture"].save===undefined');js('await settingsWindow.close(true);iow.minimized=false;iow.sync();iow.focus();')
@@ -98,10 +99,10 @@ def main(args):
    if not args.inject and not args.standalone:
     def sameorigin():
      js('OS.register("same-io",{title:"Same origin fixture",width:800,height:650,mount:w=>{const f=OS.el("iframe",{class:"same-fixture",src:arg+"/tests/web-io/fixture.html"});w.body.append(f);OS.webIO.attach(w,f,"same-io",f.src);}});window.same=OS.openApp("same-io");await same.ready;',origin);page.wait_for_function('Aster.webIO.sessions.some(s=>s.app==="same-io"&&s.state==="connected")');f=page.locator('.same-fixture').element_handle().content_frame();f.locator('#open').click();d=picker();d.locator('[data-io-path="/Documents/IO/a.txt"]').click();d.get_by_role('button',name='Open',exact=True).click();f.wait_for_function('result?.name==="a.txt"');assert f.evaluate('result.text')=='Unicode żółć 日本語 🧪'
-     js("await OS.webIO.update('same-io','storage',true);");f.wait_for_function('AsterFiles.policy.storage');f.evaluate('window.privateHandle=null;window.privateFailure=null;navigator.storage.getDirectory().then(h=>privateHandle=h,e=>privateFailure=e.name)');page.get_by_role('dialog',name='Use Aster app storage?',exact=True).get_by_role('button',name='Use Aster storage',exact=True).click();f.wait_for_function('privateHandle||privateFailure');assert not f.evaluate('privateFailure');f.evaluate('async()=>{const f=await privateHandle.getFileHandle("cache.bin",{create:true});const s=await f.createWritable();await s.write(new Uint8Array([0,255,17]));await s.close();}');js("assert((await OS.fs.read('/Documents/App storage/same-io/cache.bin')).size===3);await OS.webIO.update('same-io','storage',false);");f.wait_for_function('!AsterFiles.policy.storage');assert f.evaluate('privateHandle.queryPermission()')=='denied';js('await same.close(true);')
+     js("await OS.webIO.update('same-io','storage',true);");f.wait_for_function('AsterFiles.policy.storage');f.evaluate('window.privateHandle=null;window.privateFailure=null;void navigator.storage.getDirectory().then(h=>privateHandle=h,e=>privateFailure=e.name)');page.get_by_role('dialog',name='Use Aster app storage?',exact=True).get_by_role('button',name='Use Aster storage',exact=True).click();f.wait_for_function('privateHandle||privateFailure');assert not f.evaluate('privateFailure'), f.evaluate('privateFailure');f.evaluate('async()=>{const f=await privateHandle.getFileHandle("cache.bin",{create:true});const s=await f.createWritable();await s.write(new Uint8Array([0,255,17]));await s.close();}');js("assert((await OS.fs.read('/Documents/App storage/same-io/cache.bin')).size===3);await OS.webIO.update('same-io','storage',false);");f.wait_for_function('!AsterFiles.policy.storage');assert f.evaluate('privateHandle.queryPermission()')=='denied';js('await same.close(true);')
     check('Owned same-origin pages connect automatically without source replacement',sameorigin)
    def revokedstream():
-    frame.locator('#text').fill('');frame.locator('#save').click();d=picker('Save to Aster');d.get_by_label('File name',exact=True).fill('revoked.txt');d.get_by_role('button',name='Save',exact=True).click();assert not done()['error'];frame.evaluate('async()=>{window.stream=await h.createWritable();await stream.write("must not commit");}');js("OS.webIO.revoke('io-fixture');");result=frame.evaluate('async()=>{try{await stream.close();return "unsafe"}catch(e){return e.name}}');assert result=='InvalidStateError',result;js("assert((await OS.fs.read('/Documents/IO/revoked.txt')).size===0);")
+    frame.locator('#text').click();frame.locator('#text').fill('Original before revocation');assert frame.locator('#text').input_value()=='Original before revocation',frame.locator('#text').input_value();frame.locator('#save').click();d=picker('Save to Aster');d.get_by_label('File name',exact=True).fill('revoked.txt');d.get_by_role('button',name='Save',exact=True).click();assert not done()['error'];frame.evaluate('async()=>{window.stream=await h.createWritable();await stream.write("must not commit");}');js("OS.webIO.revoke('io-fixture');");result=frame.evaluate('async()=>{try{await stream.close();return "unsafe"}catch(e){return e.name}}');assert result=='InvalidStateError',result;js("assert(await OS.fs.text(await OS.fs.read('/Documents/IO/revoked.txt'))==='Original before revocation','Revocation must preserve the committed original bytes');")
     frame.locator('#open').click();picker();js("OS.webIO.revoke('io-fixture');");assert done()['error']['name']=='AbortError';assert page.locator('.io-picker').count()==0
    check('Revoking a pending stream and picker cannot commit staged bytes or leave a dialog',revokedstream)
    def readonly():
@@ -114,7 +115,7 @@ def main(args):
     frame.wait_for_function('result?.files?.[0]?.name==="master-native.txt"');js("await OS.webIO.update('io-fixture','enabled',null);await OS.webIO.update('io-fixture','inputs',null);")
    check('Master-off overrides enabled child routes and retains native browser file input',master)
    def private():
-    js("await OS.webIO.update('io-fixture','storage',true);");frame.wait_for_function('AsterFiles.policy.storage');frame.evaluate('window.privateResult=null;window.privateError=null; navigator.storage?.getDirectory ? navigator.storage.getDirectory().then(x=>window.privateResult=x,e=>window.privateError=e.name) : (window.privateError="Unavailable")')
+    js("await OS.webIO.update('io-fixture','storage',true);");frame.wait_for_function('AsterFiles.policy.storage');frame.evaluate('window.privateResult=null;window.privateError=null; void (navigator.storage?.getDirectory ? navigator.storage.getDirectory().then(x=>window.privateResult=x,e=>window.privateError=e.name) : (window.privateError="Unavailable"))')
     # An opaque origin may not expose navigator.storage; explicit SDK directory
     # grants remain available there. The actual private-root test runs same-origin.
     if frame.evaluate('privateError==="Unavailable"'):return 'Opaque browser does not expose storage; no property spoofed'
@@ -140,6 +141,8 @@ def main(args):
      js("await OS.themes.select(arg);",theme);frame.locator('#open').click();d=picker();assert d.is_visible();page.screenshot(path=str(out/('picker-'+theme+'.png')));d.get_by_role('button',name='Cancel',exact=True).click();assert done()['error']['name']=='AbortError'
     page.set_viewport_size({'width':390,'height':844});page.wait_for_function('innerWidth===390');js('iow.minimized=false;iow.focus();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));');frame.locator('#open').focus();frame.locator('#open').press('Enter');d=page.get_by_role('dialog',name='Open from Aster',exact=True);d.wait_for();bounds=d.bounding_box();assert bounds['x']>=0 and bounds['x']+bounds['width']<=391;page.screenshot(path=str(out/'picker-mobile.png'));page.keyboard.press('Escape');frame.wait_for_function('error?.name==="AbortError"');page.set_viewport_size({'width':1440,'height':1000});js("await OS.themes.select('windows-light');")
    check('The real picker follows three OS profiles, preserves cancellation and fits mobile',themepicker)
+   from review_checks import run as review_checks
+   review_checks(page,ctx,js,picker,frame,done,check,args,ROOT,origin)
    def cleanup():
     js('await iow.close(true);');page.wait_for_function('!Aster.webIO.sessions.length');assert page.locator('.io-picker').count()==0
    check('Closing windows revokes sessions, streams and transfer offers',cleanup)
@@ -150,7 +153,14 @@ def main(args):
     if args.standalone:
      ctx.set_offline(True);page.reload();page.wait_for_function('Aster.booted && Aster.webIO');js("assert(await OS.fs.stat('/Documents/IO/export.bin'));");check('Standalone boots with networking disabled',lambda:True)
    assert not report['errors'],report['errors'];report['status']='PASS'
-  except Exception as e:report['status']='FAIL';report['error']=str(e);raise
+  except Exception as e:
+   report['status']='FAIL';report['error']=str(e)
+   try:
+    report['bootstrapDiagnostics']=page.evaluate('({url:location.href,environmentOrigin:window.origin,urlOrigin:location.origin,sessions:Aster.webIO?.sessions,messages:window.ioHandshake})')
+    report['frameDiagnostics']=[f.evaluate('({url:location.href,environmentOrigin:window.origin,urlOrigin:location.origin,allowed:window.ASTER_FILE_HOST_ORIGINS,connected:window.AsterFiles?.connected,messages:window.ioHandshake})') for f in page.frames]
+    page.screenshot(path=str(out/'failure.png'))
+   except Exception as detail:report['diagnosticError']=str(detail)
+   raise
   finally:(out/'results.json').write_text(json.dumps(report,indent=2));browser.close();server.shutdown()
 if __name__=='__main__':
  ap=argparse.ArgumentParser();ap.add_argument('--inject',action='store_true');ap.add_argument('--standalone',action='store_true');ap.add_argument('--engine',default='chromium');ap.add_argument('--browser');ap.add_argument('--output',type=Path);main(ap.parse_args())

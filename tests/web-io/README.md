@@ -25,6 +25,8 @@ from its actual deployed site and remain unmodified. Its real Browse dialog open
 an Aster file; its actual editor and Save pipeline encode/write the updated file.
 Application module response hashes, screenshots, and readback are retained. Its
 public read-only document API verifies text but is not a replacement I/O path.
+TwinForge then connects the Aster folder through its original button and creates
+a child through its original New folder command; its application code is unchanged.
 
 `--inject --browser /usr/bin/chromium` is a local fallback when managed browsers
 block navigation. It is explicitly memory-only, omits HTTP-only/real persistent
@@ -33,6 +35,23 @@ private storage may be absent in opaque origins; that capability absence is
 reported rather than spoofing the navigator object.
 
 Inherited theme, desktop, Win32 and 74-app workflows remain enabled. The live test
-proves one unchanged deployed app's real round-trip, not all features in all 74
+proves NotepadXP's unchanged deployed round-trip and TwinForge's directory workflow, not all features in all 74
 apps. Native OS drag-out, physical permission dialogs and arbitrary cross-origin
 sites are not universally automatable or claimed supported. See docs/web-files.md.
+
+## Consolidation regressions
+
+`review_checks.py`, invoked by the normal browser suite, covers all eight review
+findings: navigation-only root, late folder-kind replacement, grant reuse at
+2,048 entries, private-root exclusion and storage-file collisions, distinct
+duplicate drop roots, expired user activation, and an explicitly connected
+different-origin Orbit SDK site. It also verifies pending saves/abort, exclusive
+writers, live handle descriptions, the independent write policy, final-transaction
+transfer authority, and that a prepared-link drag cannot navigate the app away.
+The cooperative website test uses a second actual HTTP origin with no sandbox
+relaxation and verifies parent access remains denied.
+
+Native file drops are independently injected by the Chromium DevTools browser
+input API into a real disk-backed drag; curated duplicate directory trees test
+the host's atomic planner, not a claim of physical OS folder-drag automation.
+See `docs/file-integration-reconciliation.md` for the local/PR source audit.
