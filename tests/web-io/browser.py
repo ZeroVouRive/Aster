@@ -17,7 +17,7 @@ def main(args):
  report={'mode':'injected memory' if args.inject else 'standalone' if args.standalone else 'HTTP/IndexedDB','engine':args.engine,'checks':[],'errors':[]}
  with sync_playwright() as p:
   browser=getattr(p,args.engine).launch(headless=True,executable_path=args.browser or None,args=['--no-sandbox'] if args.engine=='chromium' else [])
-  ctx=browser.new_context(viewport={'width':1440,'height':1000},accept_downloads=True,service_workers='allow');page=ctx.new_page();page.set_default_timeout(12000);page.on('pageerror',lambda e:report['errors'].append(str(e)))
+  ctx=browser.new_context(viewport={'width':1440,'height':1000},accept_downloads=True,service_workers='allow');ctx.add_init_script("window.ioHandshake=[];addEventListener('message',e=>{if(e.data?.type?.startsWith('aster-io-')&&ioHandshake.length<12)ioHandshake.push({type:e.data.type,origin:e.origin,parent:e.source===parent,ports:e.ports.length});});");page=ctx.new_page();page.set_default_timeout(12000);page.on('pageerror',lambda e:report['errors'].append(str(e)))
   def js(text,arg=None):return page.evaluate('async arg=>{const OS=Aster;const assert=(x,m="Assertion failed")=>{if(!x)throw Error(m);};'+text+'}',arg)
   def check(name,fn):
    start=time.monotonic()
@@ -33,6 +33,7 @@ def main(args):
    js("await OS.fs.mkdir('/Documents/IO');await OS.fs.write('/Documents/IO/a.txt','Unicode żółć 日本語 🧪');await OS.fs.write('/Documents/IO/b.bin',new Blob([new Uint8Array([0,255,128,1])]));await OS.fs.mkdir('/Documents/IO/sub');await OS.fs.write('/Documents/IO/sub/c.txt','child');await OS.fs.write('/Documents/io-fixture.html',arg,'text/html');OS.registerCustom({id:'io-fixture',title:'File API fixture',path:'/Documents/io-fixture.html'});window.iow=OS.openApp('io-fixture');await iow.ready;",(ROOT/'tests/web-io/fixture.html').read_text())
    page.wait_for_function('Aster.webIO.sessions.some(s=>s.app==="io-fixture"&&s.state==="connected")');frame=page.locator('.app-frame').element_handle().content_frame();frame.wait_for_function('window.AsterFiles?.connected')
    def opening():
+    assert frame.evaluate('ASTER_FILE_HOST_ORIGINS')==[page.evaluate('window.origin')]
     frame.locator('#open').click();d=picker();d.locator('[data-io-path="/Documents/IO/a.txt"]').click();page.screenshot(path=str(out/'aster-open-picker.png'));d.get_by_role('button',name='Open',exact=True).click();r=done();assert r['error'] is None,r;assert r['result']['text']=='Unicode żółć 日本語 🧪';assert frame.evaluate('(()=>{try{return !parent.Aster}catch(e){return e.name==="SecurityError"}})()')
    check('Opaque sandbox gets real selected bytes without access to the parent desktop',opening)
    def multiple():
@@ -152,7 +153,14 @@ def main(args):
     if args.standalone:
      ctx.set_offline(True);page.reload();page.wait_for_function('Aster.booted && Aster.webIO');js("assert(await OS.fs.stat('/Documents/IO/export.bin'));");check('Standalone boots with networking disabled',lambda:True)
    assert not report['errors'],report['errors'];report['status']='PASS'
-  except Exception as e:report['status']='FAIL';report['error']=str(e);raise
+  except Exception as e:
+   report['status']='FAIL';report['error']=str(e)
+   try:
+    report['bootstrapDiagnostics']=page.evaluate('({url:location.href,environmentOrigin:window.origin,urlOrigin:location.origin,sessions:Aster.webIO?.sessions,messages:window.ioHandshake})')
+    report['frameDiagnostics']=[f.evaluate('({url:location.href,environmentOrigin:window.origin,urlOrigin:location.origin,allowed:window.ASTER_FILE_HOST_ORIGINS,connected:window.AsterFiles?.connected,messages:window.ioHandshake})') for f in page.frames]
+    page.screenshot(path=str(out/'failure.png'))
+   except Exception as detail:report['diagnosticError']=str(detail)
+   raise
   finally:(out/'results.json').write_text(json.dumps(report,indent=2));browser.close();server.shutdown()
 if __name__=='__main__':
  ap=argparse.ArgumentParser();ap.add_argument('--inject',action='store_true');ap.add_argument('--standalone',action='store_true');ap.add_argument('--engine',default='chromium');ap.add_argument('--browser');ap.add_argument('--output',type=Path);main(ap.parse_args())
