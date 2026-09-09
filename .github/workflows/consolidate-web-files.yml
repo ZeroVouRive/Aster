@@ -1,0 +1,83 @@
+name: Apply verified file integration reconciliation
+on:
+  push:
+    branches: [feat/web-file-portal]
+    paths: ['.github/workflows/consolidate-web-files.yml']
+permissions:
+  contents: write
+concurrency:
+  group: consolidate-file-integration
+  cancel-in-progress: false
+jobs:
+  consolidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify complete bounded source delta before any write
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path, PurePosixPath
+          import base64, hashlib, json, zlib
+          text=''.join(Path(f'.transfer/review-{i}.b64').read_text().strip() for i in range(4))
+          assert len(text)==21448
+          packed=base64.b64decode(text,validate=True)
+          assert hashlib.sha256(packed).hexdigest()=='8d2492e7e8d0c0c019317f6683ddc21b38f2bb6309c2aee66ccbc06db199a9c0'
+          decoder=zlib.decompressobj();raw=decoder.decompress(packed,42826)
+          assert decoder.eof and not decoder.unused_data and len(raw)==42825
+          assert hashlib.sha256(raw).hexdigest()=='c5f54773ef420819940137d6eaeaad796cb9bf76313756e3c189e97658600bfe'
+          changes=json.loads(raw)
+          allowed={'README.md','build.py','docs/file-integration-reconciliation.md','docs/web-file-integration.md','docs/web-files.md','src/apps-files.js','src/explorer-operations.js','src/web-io-client.js','src/web-io-host.js','src/web-io-models.js','src/web-io-shell.js','sw.js','tests/web-io/README.md','tests/web-io/browser.py','tests/web-io/live.py','tests/web-io/models.cjs','tests/web-io/review_checks.py'}
+          assert len(changes)==17 and {c['path'] for c in changes}==allowed
+          output=[]
+          for c in changes:
+              path=PurePosixPath(c['path']);p=Path(path)
+              assert not path.is_absolute() and '..' not in path.parts and not p.is_symlink()
+              if c['before'] is None:
+                  assert not p.exists(),str(p)
+                  data=c['content'].encode('utf-8')
+              else:
+                  old=p.read_bytes()
+                  assert hashlib.sha256(old).hexdigest()==c['before'],'Concurrent source change: '+str(p)
+                  source=old.decode('utf-8');last=0
+                  for a,b,value in c['ops']:
+                      assert isinstance(a,int) and isinstance(b,int) and last<=a<=b<=len(source) and isinstance(value,str)
+                      last=b
+                  for a,b,value in reversed(c['ops']):source=source[:a]+value+source[b:]
+                  data=source.encode('utf-8')
+              assert hashlib.sha256(data).hexdigest()==c['after'],'Output mismatch: '+str(p)
+              output.append((p,data))
+          for p,data in output:p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data)
+          print('All 17 editable source records verified.')
+          PY
+      - name: Validate source, all model contracts and generated SDK
+        run: |
+          for f in src/*.js src/win32/*.js sw.js; do node --check "$f"; done
+          python3 -m py_compile build.py tests/web-io/*.py
+          python3 build.py
+          cmp src/web-io-client.js sdk/aster-files.js
+          node --test $(find tests -type f \( -name 'models.cjs' -o -name 'contracts.cjs' -o -name 'catalog.cjs' \))
+          git diff --check
+      - name: Commit unified source on the stacked PR branch
+        run: |
+          rm -rf .transfer
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          git commit -m 'Consolidate both file integrations and fix scoped access and transfer regressions'
+          git push origin HEAD:feat/web-file-portal
+      - name: Preserve diagnostics
+        if: failure()
+        run: |
+          mkdir -p /tmp/file-review
+          git diff > /tmp/file-review/review.diff
+          git status --short > /tmp/file-review/status.txt
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: file-review-import-diagnostics
+          path: /tmp/file-review/
+          retention-days: 7
