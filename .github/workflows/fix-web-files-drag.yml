@@ -1,0 +1,61 @@
+name: Complete cross-process Web Files drag routing
+on:
+  push:
+    branches: [feat/web-app-file-integration]
+    paths: ['.github/workflows/fix-web-files-drag.yml']
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify all source inputs and outputs before applying the reviewed fix
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path, PurePosixPath
+          import base64,hashlib,json,lzma
+          encoded=Path('.transfer/io-drag-fix.b64').read_text().strip()
+          assert len(encoded)==6408
+          data=base64.b64decode(encoded,validate=True)
+          assert len(data)==4804 and hashlib.sha256(data).hexdigest()=='3fef741da4a6c9db8fa5a6a5c11ae46ad2a5295881205331810cb3d7ddd9591e'
+          decoder=lzma.LZMADecompressor(memlimit=128*1024*1024)
+          raw=decoder.decompress(data,max_length=12317)
+          assert decoder.eof and not decoder.unused_data and len(raw)==12316
+          assert hashlib.sha256(raw).hexdigest()=='f1193d4ba2d7f2492f16de251bf97059b4c53e473523819b867068da025457df'
+          changes=json.loads(raw)
+          allowed={'docs/web-files.md','src/web-io-host.js','src/web-io-models.js','src/web-io-client.js','tests/web-io/models.cjs','tests/web-io/README.md','tests/web-io/browser.py'}
+          assert len(changes)==7 and {c['path'] for c in changes}==allowed
+          outputs=[]
+          for c in changes:
+              p=Path(c['path']);old=p.read_bytes()
+              assert hashlib.sha256(old).hexdigest()==c['before'],'Concurrent edit: '+str(p)
+              text=old.decode();last=0
+              for a,b,v in c['ops']:
+                  assert isinstance(a,int) and isinstance(b,int) and last<=a<=b<=len(text) and isinstance(v,str)
+                  last=b
+              for a,b,v in reversed(c['ops']):text=text[:a]+v+text[b:]
+              data=text.encode();assert hashlib.sha256(data).hexdigest()==c['after'],str(p)
+              outputs.append((p,data))
+          for p,data in outputs:p.write_bytes(data)
+          PY
+      - name: Keep application security assertions and rebuild the standalone edition
+        run: |
+          node --check src/web-io-host.js
+          node --check src/web-io-client.js
+          node --test tests/web-io/models.cjs
+          python3 -m py_compile tests/web-io/browser.py
+          python3 build.py
+          git diff --check
+      - name: Commit production and regression changes
+        run: |
+          rm -rf .transfer
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          git commit -m 'Relay isolated pointer events safely and require confirmation for untrusted remote releases'
+          git push origin HEAD:feat/web-app-file-integration
