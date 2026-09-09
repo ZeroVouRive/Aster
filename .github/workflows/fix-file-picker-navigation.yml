@@ -1,0 +1,48 @@
+name: Finish asynchronous picker navigation
+on:
+  push:
+    branches: [feat/web-file-portal]
+    paths: ['.github/workflows/fix-file-picker-navigation.yml']
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply exact reviewed runtime fix and delayed-real-read regression
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64,zlib,json,hashlib
+          packed=base64.b64decode('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',validate=True)
+          assert hashlib.sha256(packed).hexdigest()=='6dcb75f60708be8a7d3eb6379387e6e13f5e6b4e270c20a325a287d921354e33'
+          decoder=zlib.decompressobj();raw=decoder.decompress(packed,5240)
+          assert decoder.eof and not decoder.unused_data and len(raw)==5239
+          assert hashlib.sha256(raw).hexdigest()=='58482bb7b43be996de654de6b6291ef730b4f0f5c07135c3248de21d3db1d52e'
+          changes=json.loads(raw);assert {c['path'] for c in changes}=={'src/web-io-host.js','tests/web-io/review_checks.py','sw.js'}
+          for c in changes:
+              p=Path(c['path']);data=p.read_bytes();assert hashlib.sha256(data).hexdigest()==c['before'],str(p)
+              text=data.decode()
+              for old,new in c['pairs']:
+                  assert text.count(old)==1,(str(p),old)
+                  text=text.replace(old,new)
+              data=text.encode();assert hashlib.sha256(data).hexdigest()==c['after'],str(p)
+              p.write_bytes(data)
+          PY
+          node --check src/web-io-host.js
+          python3 -m py_compile tests/web-io/*.py
+          python3 build.py
+          node --test tests/web-io/models.cjs
+          git diff --check
+      - name: Commit source and rebuilt standalone
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/web-io-host.js tests/web-io/review_checks.py sw.js Aster.html
+          git commit -m 'Prevent stale folder lookups and listings from replacing newer picker input or errors'
+          git push origin HEAD:feat/web-file-portal
