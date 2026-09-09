@@ -46,7 +46,7 @@ def main():
    tf=page.locator('.web-app-frame').element_handle().content_frame();tf.wait_for_function('window.AsterFiles?.connected && document.querySelector("#pane-0 .volume-bar select")?.options.length')
    tf.locator('#pane-0 .mount-folder').click();d=page.get_by_role('dialog',name='Choose Aster folder',exact=True)
    d.get_by_label('Aster folder',exact=True).fill('/Documents/TwinForgeBridge');d.get_by_role('button',name='Go',exact=True).click();page.wait_for_function('document.querySelector(".io-picker-status").textContent.startsWith("/Documents/TwinForgeBridge")')
-   d.get_by_role('button',name='Select folder',exact=True).click();tf.wait_for_function('document.querySelector("#pane-0 .path-input").value.includes("TwinForgeBridge")')
+   d.get_by_role('button',name='Select folder',exact=True).click();tf.wait_for_function('document.querySelector("#pane-0 .volume-bar select")?.selectedOptions[0]?.textContent==="TwinForgeBridge" && document.querySelector("#pane-0 .a11y-rows")?.textContent.includes("source.txt")')
    tf.locator('.functionbar [data-action="mkdir"]').click();d=tf.get_by_role('dialog',name='New folder',exact=True);d.locator('#prompt-value').fill('FromTwinForge');d.get_by_role('button',name='Create',exact=True).click()
    for _ in range(100):
     created=js("return await OS.fs.stat('/Documents/TwinForgeBridge/FromTwinForge');")
