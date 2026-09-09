@@ -1,0 +1,137 @@
+name: Complete web file integration
+on:
+  push:
+    branches: [feat/web-app-file-integration]
+    paths: ['.github/workflows/complete-web-files.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: complete-web-files
+  cancel-in-progress: false
+jobs:
+  integrate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: feat/web-app-file-integration
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Wire the existing committed broker into the desktop
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path.cwd()
+          required=['src/web-io-models.js','src/web-io-client.js','src/web-io-host.js','src/web-io-shell.js','src/web-io.css','tests/web-io/models.cjs','tests/web-io/browser.py','tests/web-io/live.py','tests/web-io/fixture.html']
+          for name in required:
+              assert (root/name).is_file(), 'Missing saved implementation: '+name
+          p=Path('index.html');text=p.read_text()
+          if 'src/web-io.css' not in text:
+              assert '</head>' in text
+              text=text.replace('</head>','<link rel="stylesheet" href="src/web-io.css">\n</head>',1)
+          modules=['web-io-models.js','web-io-client.js','web-io-host.js','web-io-shell.js']
+          present=[('src/'+name) in text for name in modules]
+          assert not any(present) or all(present), 'Partially installed script list needs review'
+          if not all(present):
+              anchor=re.search(r'<script\b[^>]*\bsrc=["\']src/web-app-settings\.js["\'][^>]*>\s*</script>',text)
+              assert anchor, 'Expected web-app settings integration anchor is missing'
+              addition='\n'+'\n'.join('<script src="src/'+name+'"></script>' for name in modules)
+              text=text[:anchor.end()]+addition+text[anchor.end():]
+          p.write_text(text)
+          count=0
+          pattern=re.compile(r'(?P<obj>[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\.srcdoc\s*=\s*(?P<rhs>[^;\n]+);')
+          for name in ['src/core.js','src/apps-files.js']:
+              p=Path(name);text=p.read_text()
+              def wrap(m):
+                  global count
+                  obj,rhs=m.group('obj'),m.group('rhs').strip()
+                  if 'webIO.bootstrap' in rhs or rhs in ["''",'""','``'] or '`' in rhs:return m.group(0)
+                  if not re.search(r'html|\.text\b|text\b|source\b|content\b',rhs,re.I):return m.group(0)
+                  count+=1
+                  return obj+".dataset.asterIoPrepared='true';"+obj+'.srcdoc=OS.webIO?OS.webIO.bootstrap('+rhs+'):('+rhs+');'
+              text=pattern.sub(wrap,text);p.write_text(text)
+          assert count or 'webIO.bootstrap' in Path('src/core.js').read_text(), 'Custom-app SDK injection not found'
+          # The SDK must run before app code without putting the document in quirks mode.
+          p=Path('src/web-io-host.js');text=p.read_text()
+          old="return '<script>'+js.replace(/<\\/script/gi,'<\\\\/script')+'</script>'+html;"
+          if old in text:
+              new="const source=String(html),tag='<script>'+js.replace(/<\\/script/gi,'<\\\\/script')+'</script>';const head=/<head(?:\\s[^>]*)?>/i.exec(source);if(head)return source.slice(0,head.index+head[0].length)+tag+source.slice(head.index+head[0].length);const doctype=/^\\s*<!doctype[^>]*>/i.exec(source);return doctype?source.slice(0,doctype[0].length)+tag+source.slice(doctype[0].length):tag+source;"
+              text=text.replace(old,new,1)
+          assert "tag='<script>'" in text, 'Standards-mode bootstrap patch did not apply'
+          old='async function ensureFile(s,p,epoch){const existing=await fs.stat(p);alive(s,\'save\',epoch);'
+          if old in text:
+              text=text.replace(old,"async function ensureFile(s,p,epoch,expected){const existing=await fs.stat(p);alive(s,'save',epoch);if(M.stamp(existing)!==expected)fail('The save destination changed after selection. Choose it again.','InvalidModificationError');",1)
+              text=text.replace('await ensureFile(s,picked.paths[0],epoch);','await ensureFile(s,picked.paths[0],epoch,picked.reviewed[0][1]);')
+          assert 'picked.reviewed[0][1]' in text, 'Save-selection revision check not installed'
+          p.write_text(text)
+          p=Path('src/web-io-client.js');text=p.read_text()
+          text=text.replace("if(m.type==='policy'){policy={...m.policy};return;}","if(m.type==='policy'){policy={...m.policy};handles.clear();return;}")
+          p.write_text(text)
+          p=Path('sw.js');text=p.read_text()
+          text,n=re.subn(r'(\b(?:const|let)\s+(?:CACHE|CACHE_NAME|VERSION|CACHE_VERSION)\s*=\s*)([\"\'])([^\"\']+)(\2)',lambda m:m.group(1)+m.group(2)+'aster-web-files-v1'+m.group(2),text,count=1)
+          if not n:
+              versions=re.findall(r'[\"\'](aster[^\"\']{0,100})[\"\']',text,re.I)
+              assert versions, 'Could not find the service-worker cache version'
+              text=text.replace(versions[0],'aster-web-files-v1',1)
+          refs=[('src/'+name) for name in modules]+['src/web-io.css']
+          if not all(name in text for name in refs):
+              anchor=re.search(r'([\"\'])(?:\./)?src/core\.js\1',text)
+              assert anchor, 'Cache manifest core entry is missing'
+              text=text[:anchor.end()]+','+','.join(repr(name) for name in refs if name not in text)+text[anchor.end():]
+          p.write_text(text)
+          p=Path('.gitignore');text=p.read_text()
+          if 'tests/web-io/artifacts/' not in text:text+='\n# File bridge browser evidence\ntests/web-io/artifacts/\n'
+          p.write_text(text)
+          print('Integrated SDK, broker, policies, picker UI, transfers and cache entries.')
+          PY
+      - name: Validate source and rebuild the standalone edition
+        run: |
+          for f in src/*.js src/win32/*.js sw.js; do node --check "$f"; done
+          python -m py_compile build.py tests/web-io/*.py
+          node --test tests/web-io/models.cjs
+          python build.py
+          git diff --check
+      - name: Commit only the integration delta on the feature branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html src/core.js src/apps-files.js src/web-io-host.js src/web-io-client.js sw.js .gitignore Aster.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'Wire web-app file APIs into Aster with guarded writes and reversible routing'
+            git push origin HEAD:feat/web-app-file-integration
+          fi
+          git rev-parse HEAD > /tmp/web-files-head.txt
+      - name: Install real browser verification tools
+        run: |
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Exercise actual file APIs and transfers over HTTP
+        run: python tests/web-io/browser.py
+      - name: Exercise the offline-capable standalone edition
+        run: python tests/web-io/browser.py --standalone --output tests/web-io/artifacts/standalone
+      - name: Run unchanged deployed application interoperability
+        run: python tests/web-io/live.py
+      - name: Retain exact source and diagnostics even on failure
+        if: always()
+        run: |
+          mkdir -p tests/web-io/artifacts
+          git archive --format=zip HEAD -o tests/web-io/artifacts/source.zip
+          git rev-parse HEAD > tests/web-io/artifacts/checkout.txt
+          git diff > tests/web-io/artifacts/uncommitted.patch
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: completed-web-files-verification
+          path: |
+            tests/web-io/artifacts/
+            Aster.html
+          retention-days: 14
