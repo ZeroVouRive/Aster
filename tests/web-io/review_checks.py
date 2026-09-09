@@ -62,6 +62,29 @@ def run(page, ctx, js, picker, frame, done, check, args, root, origin):
         v=frame.evaluate('async()=>{try{await dir.getDirectoryHandle("App storage");return "unsafe"}catch(e){return e.name}}');assert v=='NotAllowedError',v
         js("const files=await OS.webIO.filesFromPaths(['/Documents/App storage/foreign-app/private.txt']).then(()=>null,e=>e);assert(files?.name==='NotAllowedError');")
     check('Security: app-private roots are excluded from pickers, public handles and exports',private_paths)
+    def navigation_races():
+        cleanup_ui()
+        # Delay genuine records rather than providing substituted file contents.
+        js("window.realStat=OS.fs.stat;window.heldStat=false;window.onceStat=true;window.statGate=new Promise(r=>window.releaseStat=r);OS.fs.stat=async function(p){const result=await realStat.call(this,p);if(p==='/Documents'&&onceStat){onceStat=false;heldStat=true;await statGate;}return result;};")
+        try:
+            frame.locator('#open').click();d=page.get_by_role('dialog',name='Open from Aster',exact=True);d.wait_for();page.wait_for_function('heldStat')
+            address=d.get_by_label('Aster folder',exact=True);address.fill('/Documents/IO')
+            js('releaseStat();await new Promise(r=>setTimeout(r,0));')
+            page.wait_for_function('document.querySelector(".io-picker-status").textContent==="/Documents"')
+            assert address.input_value()=='/Documents/IO','A delayed initial lookup replaced newly typed text'
+            d.get_by_role('button',name='Go',exact=True).click();page.wait_for_function('document.querySelector(".io-picker-status").textContent==="/Documents/IO"')
+        finally:js('OS.fs.stat=realStat;releaseStat();')
+        js("window.realList=OS.fs.list;window.heldList=false;window.onceList=true;window.listGate=new Promise(r=>window.releaseList=r);OS.fs.list=async function(p){const result=await realList.call(this,p);if(p==='/Documents/IO'&&onceList){onceList=false;heldList=true;await listGate;}return result;};")
+        try:
+            d.get_by_role('button',name='Go',exact=True).click();page.wait_for_function('heldList')
+            address.fill('/Documents/App storage/foreign-app');d.get_by_role('button',name='Go',exact=True).click()
+            page.wait_for_function('document.querySelector(".io-picker-status").textContent.includes("not a public file scope")')
+            js('releaseList();await new Promise(r=>setTimeout(r,0));')
+            assert 'not a public file scope' in d.locator('.io-picker-status').inner_text(),'An obsolete listing replaced the latest error'
+            assert address.input_value()=='/Documents/App storage/foreign-app'
+            d.get_by_role('button',name='Cancel',exact=True).click();assert done()['error']['name']=='AbortError'
+        finally:js('OS.fs.list=realList;releaseList();')
+    check('Picker navigation retains typed paths and rejects obsolete asynchronous listings',navigation_races)
     def storage_collision():
         js("await OS.webIO.update('io-collision-fixture','storage',true);await OS.fs.write('/Documents/App storage/io-collision-fixture','not a directory');window.collisionSession=OS.webIO.makeSession(iow,iow.body.querySelector('iframe'),'io-collision-fixture');window.storageCollision=OS.webIO.dispatch(collisionSession,'storage',{}).then(()=>null,e=>e.name);")
         d=page.get_by_role('dialog',name='Use Aster app storage?',exact=True);d.get_by_role('button',name='Use Aster storage',exact=True).click()
