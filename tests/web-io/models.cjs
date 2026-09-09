@@ -1,5 +1,5 @@
 'use strict';const {test}=require('node:test'),a=require('node:assert/strict'),M=require('../../src/web-io-models.js');
-test('master switch overrides every subordinate feature',()=>{const s=M.settings({defaults:{enabled:false,save:true},apps:{demo:{open:true}}});a.ok(Object.values(M.policy(s,'demo')).every(x=>!x));});
+test('master switch overrides every subordinate feature',()=>{const s=M.settings({defaults:{enabled:false,save:true},apps:{demo:{open:true,enabled:true}}});a.ok(Object.values(M.policy(s,'demo')).every(x=>!x));});
 test('per-app granular settings preserve independent defaults',()=>{const s=M.settings({defaults:{open:false},apps:{demo:{save:false}}});a.equal(M.policy(s,'demo').save,false);a.equal(M.policy(s,'other').save,true);a.equal(M.policy(s,'other').open,false);a.equal(M.policy(s,'demo').storage,false);});
 test('untrusted setting keys and prototype pollution are discarded',()=>{const s=M.settings(JSON.parse('{"apps":{"__proto__":{"open":false},"ok":{"eval":true,"save":false}}}'));a.equal(s.apps.ok.save,false);a.equal(s.apps.ok.eval,undefined);a.equal(Object.hasOwn(s.apps,'__proto__'),false);});
 test('path traversal and host/system paths are rejected',()=>{for(const p of ['/Documents/../secret','/Local/a','/.Trash/x','/a//b','relative','/a\\b'])a.throws(()=>M.path(p));});

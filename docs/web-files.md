@@ -6,7 +6,7 @@ Open **Settings → Apps → Web app files** (searchable from Start). Global def
 apply to all catalog and installed apps. Each app has independent **inherit / Aster
 / browser** choices for master integration, open, save/write, directory pickers,
 HTML file inputs, generated downloads, incoming drops, outgoing transfers, and
-main-thread private storage. The master switch wins over subordinate switches.
+main-thread private storage. The global master switch wins even over an app-level enabled override; an app master switch also wins over its subordinate switches.
 Native device drops into Aster have a separate switch.
 
 Pickers and transfer routes default to Aster. Private storage mapping defaults off.
@@ -93,9 +93,14 @@ remains unavailable. Standard browser permission/activation requirements apply.
   drop destination can reject those; Download is the portable fallback.
 
 Opaque frames restrict native cross-frame dragging in some engines. The adapter
-therefore supports a real pointer relay and a drag overlay inside Aster. It commits
-only on a trusted pointer-up received by the parent, with Escape/timeout cleanup;
-it does not forge a trusted native browser event. The receiver's synthetic file
+therefore supports a real pointer relay and a drag overlay inside Aster. When the
+parent receives the trusted pointer-up, it routes the selected transfer directly.
+Some browser processes keep all pointer events in the source iframe; the SDK then
+forwards the gesture over its port. A port message cannot prove a physical action,
+so an isolated app's remote release displays **Complete file transfer?** before
+writing into Aster or sharing with another app. Cancel leaves all files unchanged.
+Already-trusted same-origin pages can complete directly. Escape, revocation and
+timeout clean up the relay; no trusted native event is forged. The receiver's synthetic file
 drop event has `isTrusted=false`, as required by the browser. Apps which insist on
 trusted drop events need their cooperative `aster-files-drop` handler. Pointer
 relay does not pretend to drag outside the browser window. Touch drag UI and native

@@ -16,7 +16,7 @@
     }
     function accepts(filename,mime,list){return !list?.length||list.some(s=>s[0]==='.'?filename.toLowerCase().endsWith(s):s.endsWith('/*')?mime.toLowerCase().startsWith(s.slice(0,-1)):mime.toLowerCase()===s);}
     function settings(raw={}){const out={version:1,defaults:{...DEFAULTS},apps:{},nativeDrop:true};if(raw.nativeDrop===false)out.nativeDrop=false;for(const k of FEATURES)if(typeof raw.defaults?.[k]==='boolean')out.defaults[k]=raw.defaults[k];for(const [id,v] of Object.entries(raw.apps||{}).slice(0,LIMITS.apps)){if(!/^[\w-]{1,100}$/.test(id)||!v||typeof v!=='object'||['__proto__','constructor','prototype'].includes(id))continue;const o={};for(const k of FEATURES)if(typeof v[k]==='boolean')o[k]=v[k];out.apps[id]=o;}return out;}
-    function policy(raw,id){const p={...DEFAULTS,...raw.defaults,...raw.apps?.[id]};if(!p.enabled)for(const k of FEATURES)p[k]=false;return p;}
+    function policy(raw,id){const p={...DEFAULTS,...raw.defaults,...raw.apps?.[id]};if(raw.defaults?.enabled===false||!p.enabled)for(const k of FEATURES)p[k]=false;return p;}
     function integer(value,max=LIMITS.file){if(!Number.isSafeInteger(value)||value<0||value>max)fail('Position or size exceeds the file limit.','QuotaExceededError');return value;}
     function stamp(e){return e?JSON.stringify([e.kind,e.revision||null,e.modified||0,e.size||0]):null;}
     const api=Object.freeze({LIMITS,FEATURES,DEFAULTS,name,path,relative,inside,options,accepts,settings,policy,integer,stamp,fail});root.AsterIOModels=api;if(typeof module==='object')module.exports=api;

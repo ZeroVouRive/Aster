@@ -3096,7 +3096,7 @@ struct Out { @builtin(position) pos:vec4f, @location(0) local:vec2f, @location(1
     }
     function accepts(filename,mime,list){return !list?.length||list.some(s=>s[0]==='.'?filename.toLowerCase().endsWith(s):s.endsWith('/*')?mime.toLowerCase().startsWith(s.slice(0,-1)):mime.toLowerCase()===s);}
     function settings(raw={}){const out={version:1,defaults:{...DEFAULTS},apps:{},nativeDrop:true};if(raw.nativeDrop===false)out.nativeDrop=false;for(const k of FEATURES)if(typeof raw.defaults?.[k]==='boolean')out.defaults[k]=raw.defaults[k];for(const [id,v] of Object.entries(raw.apps||{}).slice(0,LIMITS.apps)){if(!/^[\w-]{1,100}$/.test(id)||!v||typeof v!=='object'||['__proto__','constructor','prototype'].includes(id))continue;const o={};for(const k of FEATURES)if(typeof v[k]==='boolean')o[k]=v[k];out.apps[id]=o;}return out;}
-    function policy(raw,id){const p={...DEFAULTS,...raw.defaults,...raw.apps?.[id]};if(!p.enabled)for(const k of FEATURES)p[k]=false;return p;}
+    function policy(raw,id){const p={...DEFAULTS,...raw.defaults,...raw.apps?.[id]};if(raw.defaults?.enabled===false||!p.enabled)for(const k of FEATURES)p[k]=false;return p;}
     function integer(value,max=LIMITS.file){if(!Number.isSafeInteger(value)||value<0||value>max)fail('Position or size exceeds the file limit.','QuotaExceededError');return value;}
     function stamp(e){return e?JSON.stringify([e.kind,e.revision||null,e.modified||0,e.size||0]):null;}
     const api=Object.freeze({LIMITS,FEATURES,DEFAULTS,name,path,relative,inside,options,accepts,settings,policy,integer,stamp,fail});root.AsterIOModels=api;if(typeof module==='object')module.exports=api;
@@ -3179,25 +3179,41 @@ struct Out { @builtin(position) pos:vec4f, @location(0) local:vec2f, @location(1
         const drop=e=>{if(transferred.has(e)||!policy.dropIn)return;const token=e.dataTransfer.getData('application/x-aster-transfer');if(!token)return;e.preventDefault();e.stopImmediatePropagation();void receiveDrop(token,e.target||dragTarget,{clientX:e.clientX,clientY:e.clientY});};
         win.document.addEventListener('dragover',dragover,true);win.document.addEventListener('drop',drop,true);undo.push(()=>{win.document.removeEventListener('dragover',dragover,true);win.document.removeEventListener('drop',drop,true);});
         // Capture genuine page File payloads during dragstart (the only write phase).
-        const dragstart=e=>{if(!policy.dropOut||!e.isTrusted)return;const anchor=e.target.closest?.('a[download]'),blob=anchor&&blobForLink(anchor);let files=[...e.dataTransfer.files];if(!files.length&&blob)files=[new win.File([blob],anchor.download||'Download',{type:blob.type})];if(!files.length)return;
+        let lastPointer=null;const rememberPointer=e=>{if(e.isTrusted&&e.button===0)lastPointer={pointerId:e.pointerId,clientX:e.clientX,clientY:e.clientY,ctrlKey:e.ctrlKey};};win.addEventListener('pointerdown',rememberPointer,true);undo.push(()=>win.removeEventListener('pointerdown',rememberPointer,true));
+        const dragstart=e=>{if(!policy.dropOut||!e.isTrusted||!lastPointer)return;const anchor=e.target.closest?.('a[download]'),blob=anchor&&blobForLink(anchor);let files=[...e.dataTransfer.files];if(!files.length&&blob)files=[new win.File([blob],anchor.download||'Download',{type:blob.type})];if(!files.length)return;
             // Capture bytes before the browser leaves its read/write drag phase.
             // Opaque frames cannot reliably use native cross-frame drags; relay
-            // this same user gesture and require trusted parent pointer release.
-            e.preventDefault();const x=e.clientX,y=e.clientY;void request('offer',{files:files.map(f=>({name:f.name,blob:f,type:f.type}))}).then(r=>{api.lastOffer=r;return request('pointerStart',{token:r.token,x,y});}).catch(()=>{});
+            // this gesture; isolated remote release requires host confirmation.
+            e.preventDefault();const offered=request('offer',{files:files.map(f=>({name:f.name,blob:f,type:f.type}))}).then(r=>{api.lastOffer=r;return r;});relayDrag(e.target,offered,{...lastPointer,clientX:e.clientX,clientY:e.clientY});
         };
         win.document.addEventListener('dragstart',dragstart);undo.push(()=>win.document.removeEventListener('dragstart',dragstart));
+        // Pointer events may remain in the source iframe's browser process until
+        // release. Forward that gesture over the existing port. The host treats
+        // remote release as untrusted and asks for confirmation before sharing.
+        function relayDrag(element,offer,startEvent){
+            const gesture=Array.from(win.crypto.getRandomValues(new Uint8Array(16)),n=>n.toString(16).padStart(2,'0')).join('');
+            let prepared=null,ready=false,finished=false,last={phase:'move',x:startEvent.clientX,y:startEvent.clientY,ctrlKey:startEvent.ctrlKey};
+            const send=()=>{if(ready&&!dead)port.postMessage({type:'pointer',gesture,token:prepared.token,...last});};
+            const move=e=>{if(!e.isTrusted||e.pointerId!==startEvent.pointerId||finished)return;last={phase:'move',x:e.clientX,y:e.clientY,ctrlKey:e.ctrlKey};send();};
+            const release=e=>{if(!e.isTrusted||e.pointerId!==startEvent.pointerId||finished)return;finished=true;last={phase:e.type==='pointercancel'?'cancel':'end',x:e.clientX,y:e.clientY,ctrlKey:e.ctrlKey};cleanup();send();};
+            const cancel=e=>{if(e.key==='Escape'){finished=true;last.phase='cancel';cleanup();send();}};
+            function cleanup(){win.removeEventListener('pointermove',move,true);win.removeEventListener('pointerup',release,true);win.removeEventListener('pointercancel',release,true);win.removeEventListener('keydown',cancel,true);clearTimeout(timer);try{if(element.hasPointerCapture(startEvent.pointerId))element.releasePointerCapture(startEvent.pointerId);}catch{}}
+            win.addEventListener('pointermove',move,true);win.addEventListener('pointerup',release,true);win.addEventListener('pointercancel',release,true);win.addEventListener('keydown',cancel,true);
+            try{element.setPointerCapture(startEvent.pointerId);}catch{}
+            const timer=setTimeout(()=>{finished=true;last.phase='cancel';cleanup();send();},15000);
+            Promise.resolve(offer).then(value=>{prepared=value;return request('pointerStart',{token:prepared.token,gesture,x:startEvent.clientX,y:startEvent.clientY});}).then(()=>{ready=true;send();}).catch(()=>{finished=true;cleanup();});
+        }
         const api={version:1,get connected(){return !dead;},get policy(){return {...policy};},get capabilities(){return {structuredCloneHandles:false,syncAccess:false,opaqueFiles:true};},
             open:o=>request('open',{options:opts(o)}).then(r=>r.map(handle)),save:o=>request('save',{options:opts(o)}).then(handle),directory:o=>request('folder',{options:opts(o)}).then(handle),saveBlob,
             async makeDraggable(element,files){
                 const rows=files.map(f=>({name:f.name,blob:f,type:f.type})),offer=await request('offer',{files:rows});
                 // Pointer relay avoids native drag restrictions on opaque sandbox
-                // frames. The parent commits only on its own trusted pointer-up.
+                // frames. Remote release is confirmed by the host before importing.
                 let origin=null;const prior=element.draggable,oldTouch=element.style.touchAction;
                 element.draggable=false;element.style.touchAction='none';
                 const down=e=>{if(!policy.dropOut||e.button!==0||!e.isTrusted)return;origin={x:e.clientX,y:e.clientY};e.preventDefault();};
                 const move=e=>{if(!origin||!e.buttons)return;if(Math.hypot(e.clientX-origin.x,e.clientY-origin.y)<6)return;origin=null;
-                    if(element.hasPointerCapture?.(e.pointerId))element.releasePointerCapture(e.pointerId);
-                    void request('pointerStart',{token:offer.token,x:e.clientX,y:e.clientY}).catch(()=>{});};
+                    relayDrag(element,offer,e);};
                 const up=()=>origin=null;element.addEventListener('pointerdown',down);win.addEventListener('pointermove',move);win.addEventListener('pointerup',up);
                 const dispose=()=>{element.removeEventListener('pointerdown',down);win.removeEventListener('pointermove',move);win.removeEventListener('pointerup',up);element.draggable=prior;element.style.touchAction=oldTouch;request('releaseOffer',{token:offer.token}).catch(()=>{});};undo.push(dispose);return dispose;
             },
@@ -3235,7 +3251,7 @@ struct Out { @builtin(position) pos:vec4f, @location(0) local:vec2f, @location(1
     };
     const alive=s=>{if(!s.alive||s.w.closed||!s.frame.isConnected)fail('The application connection closed.','AbortError');};
     const check=(s,feature)=>{alive(s);if(!IO.policy(s.app)[feature])fail('This file integration is disabled in Aster Settings.','NotAllowedError');};
-    function revoke(s){s.epoch++;s.caps.clear();s.streams.clear();s.staged=0;s.pickerCancel?.();for(const cancel of s.dialogs||[])cancel();for(const [id,o]of offers)if(o.session===s)offers.delete(id);OS.emit('web-io');OS.emit('web-io-transfers');}
+    function revoke(s){if(activePointer?.source===s)activePointer();s.epoch++;s.caps.clear();s.streams.clear();s.staged=0;s.pickerCancel?.();for(const cancel of s.dialogs||[])cancel();for(const [id,o]of offers)if(o.session===s)offers.delete(id);OS.emit('web-io');OS.emit('web-io-transfers');}
     IO.revoke=app=>{for(const s of sessions)if(!app||s.app===app)revoke(s);};
     function grant(s,p,kind,write=false,feature='open',root=p){validPath(p);if(s.caps.size>=L.handles)fail('Too many handles. Close and reopen this app.','QuotaExceededError');const id=token(),cap={id,path:p,kind,write,feature,root,epoch:s.epoch};s.caps.set(id,cap);OS.emit('web-io');return {token:id,kind,name:label(p)};}
     function cap(s,id,write=false){alive(s);const c=s.caps.get(id);if(!c||c.epoch!==s.epoch)fail('File access was revoked. Select the file again.','NotAllowedError');check(s,c.feature);if(write&&!c.write)fail('Read-only handle. Request read/write permission first.','NotAllowedError');if(write&&!IO.policy(s.app).save)fail('Writes are disabled for this app.','NotAllowedError');return c;}
@@ -3294,7 +3310,7 @@ struct Out { @builtin(position) pos:vec4f, @location(0) local:vec2f, @location(1
     async function treeFiles(s,id){const c=cap(s,id);if(c.kind!=='directory')fail('Expected a directory.','TypeMismatchError');const all=await OS.db.all(),rows=all.filter(r=>r.kind==='file'&&M.inside(c.path,r.path));if(rows.length>L.entries)fail('Directory has too many entries.','QuotaExceededError');const out=[];let bytes=0;for(const r of rows){validPath(r.path);const f=await asFile(r,label(c.path)+'/'+r.path.slice(c.path.length+1));bytes+=f.blob.size;if(bytes>L.batch)fail('Directory exceeds transfer limit.','QuotaExceededError');out.push(f);}cap(s,id);return out;}
     async function dispatch(s,op,a={}){
         alive(s);const epoch=s.epoch,permit=feature=>{check(s,feature);if(s.epoch!==epoch)fail('Access changed during the operation.','AbortError');};switch(op){
-        case 'open':case 'input':{check(s,op==='input'?'inputs':'open');if(op==='input'&&(!Array.isArray(a.accept)||a.accept.length>64||a.accept.some(v=>typeof v!=='string'||v.length>100)))fail('Invalid input filter.');const paths=await IO.pick(s,'open',op==='input'?{multiple:a.multiple===true}:a.options,op==='input'?a.accept:null);check(s,op==='input'?'inputs':'open');if(op==='input'){const result=[];for(const p of paths)result.push(await asFile(await OS.fs.read(p)));return result;}return paths.map(p=>grant(s,p,'file',false,'open'));}
+        case 'open':case 'input':{check(s,op==='input'?'inputs':'open');if(op==='input'&&(!Array.isArray(a.accept)||a.accept.length>64||a.accept.some(v=>typeof v!=='string'||v.length>100)))fail('Invalid input filter.');const paths=await IO.pick(s,'open',op==='input'?{multiple:a.multiple===true}:a.options,op==='input'?a.accept:null);check(s,op==='input'?'inputs':'open');if(op==='input'){const result=[];let bytes=0;for(const p of paths){const f=await asFile(await OS.fs.read(p));bytes+=f.blob.size;if(bytes>L.batch)fail('Selected files exceed 128 MiB.','QuotaExceededError');result.push(f);}return result;}return paths.map(p=>grant(s,p,'file',false,'open'));}
         case 'save':{check(s,'save');const [p]=await IO.pick(s,'save',a.options);check(s,'save');await ensureEmpty(s,p,()=>permit('save'));permit('save');return grant(s,p,'file',true,'save');}
         case 'folder':{check(s,'folders');const [p]=await IO.pick(s,'folder',a.options);check(s,'folders');if(a.options?.mode==='readwrite')check(s,'save');return grant(s,p,'directory',a.options?.mode==='readwrite','folders');}
         case 'storage':{check(s,'storage');const base='/Documents/App storage',p=base+'/'+s.app;const epoch=s.epoch;if(!await ask(s,{title:'Use Aster app storage?',message:s.title+' will store its private files in '+p+'. Existing browser OPFS data is not moved.',confirm:'Use Aster storage'}))fail('Cancelled.','AbortError');check(s,'storage');if(epoch!==s.epoch)fail('Access changed.','AbortError');const puts=[];for(const path of [base,p])if(!await OS.fs.stat(path))puts.push({path,kind:'directory',modified:Date.now()});await IO.atomic(puts.map(r=>[r.path,null]),puts,[],()=>permit('storage'));changed(p);return grant(s,p,'directory',true,'storage');}
@@ -3315,22 +3331,22 @@ struct Out { @builtin(position) pos:vec4f, @location(0) local:vec2f, @location(1
         case 'writeClose':{const st=s.streams.get(a.id);if(!st)fail('Stream no longer exists.','InvalidStateError');try{cap(s,st.token,true);await IO.atomic([[st.path,st.stamp]],[newFile(st.path,st.blob)],[],()=>cap(s,st.token,true));changed(st.path);return true;}finally{s.streams.delete(a.id);s.staged=Math.max(0,s.staged-st.blob.size);}}
         case 'writeAbort':{const st=s.streams.get(a.id);if(st){s.staged=Math.max(0,s.staged-st.blob.size);s.streams.delete(a.id);}return true;}
         case 'download':{check(s,'downloads');if(!(a.blob instanceof Blob)||a.blob.size>L.file)fail('Invalid export.','QuotaExceededError');const [p]=await IO.pick(s,'save',{suggestedName:M.name(a.name)});check(s,'downloads');const old=await OS.fs.stat(p);await IO.atomic([[p,M.stamp(old)]],[newFile(p,a.blob)],[],()=>permit('downloads'));changed(p);return {name:label(p)};}
-        case 'pointerStart':{check(s,'dropOut');const o=IO.getOffer(a.token);if(o.session!==s)fail('Foreign transfer.','NotAllowedError');const r=s.frame.getBoundingClientRect();if(!Number.isFinite(a.x)||!Number.isFinite(a.y))fail('Invalid coordinates.');IO.pointerDrag(a.token,r.left+a.x,r.top+a.y,s);return true;}
+        case 'pointerStart':{check(s,'dropOut');const o=IO.getOffer(a.token);if(o.session!==s)fail('Foreign transfer.','NotAllowedError');const r=s.frame.getBoundingClientRect();if(!Number.isFinite(a.x)||!Number.isFinite(a.y))fail('Invalid coordinates.');if(a.gesture!==undefined&&!/^[a-f0-9]{32}$/.test(a.gesture))fail('Invalid drag gesture.');IO.pointerDrag(a.token,r.left+a.x,r.top+a.y,s,a.gesture);return true;}
         case 'offer':{check(s,'dropOut');const result=IO.offer(a.files,s);if(a.show)IO.showTransfers();return result;}
         case 'releaseOffer':{const o=offers.get(a.token);if(o?.session===s)offers.delete(a.token);return true;}
         case 'dropRead':{check(s,'dropIn');const o=IO.getOffer(a.token);if(o.session===s)return {files:o.files,handles:[]};const files=o.paths?await IO.filesFromPaths(o.paths):o.files;check(s,'dropIn');const hs=[];if(o.paths)for(const p of o.paths){const r=await row(p);hs.push(grant(s,p,r.kind,false,'dropIn'));}return {files,handles:hs};}
         default:fail('Unsupported Aster file operation.','NotSupportedError');}
     }
     function connect(s,port){s.port?.close();revoke(s);s.port=port;s.alive=true;s.state='connecting';let active=0;const seen=new Set();
-        port.onmessage=e=>{if(s.port!==port)return;const m=e.data;if(m?.type==='bye'){revoke(s);s.state='disconnected';s.port=null;port.close();return;}if(m?.type==='ready'){s.state='connected';OS.emit('web-io');return;}if(!m||!Number.isSafeInteger(m.id)||m.id<1||typeof m.op!=='string'||seen.has(m.id))return;if(active>=L.requests){port.postMessage({id:m.id,error:{name:'QuotaExceededError',message:'Request limit exceeded.'}});return;}seen.add(m.id);if(seen.size>4096)seen.delete(seen.values().next().value);active++;const current=s.epoch;Promise.resolve().then(()=>dispatch(s,m.op,m.args)).then(value=>{if(!s.alive||s.port!==port||s.epoch!==current)throw new DOMException('Access changed during the request.','AbortError');port.postMessage({id:m.id,value});}).catch(error=>{try{port.postMessage({id:m.id,error:{name:error.name||'Error',message:String(error.message).slice(0,500)}});}catch{}}).finally(()=>active--);};port.start();
+        port.onmessage=e=>{if(s.port!==port)return;const m=e.data;if(m?.type==='pointer'){if(activePointer?.source===s)activePointer.remote?.(m);return;}if(m?.type==='bye'){revoke(s);s.state='disconnected';s.port=null;port.close();return;}if(m?.type==='ready'){s.state='connected';OS.emit('web-io');return;}if(!m||!Number.isSafeInteger(m.id)||m.id<1||typeof m.op!=='string'||seen.has(m.id))return;if(active>=L.requests){port.postMessage({id:m.id,error:{name:'QuotaExceededError',message:'Request limit exceeded.'}});return;}seen.add(m.id);if(seen.size>4096)seen.delete(seen.values().next().value);active++;const current=s.epoch;Promise.resolve().then(()=>dispatch(s,m.op,m.args)).then(value=>{if(!s.alive||s.port!==port||s.epoch!==current)throw new DOMException('Access changed during the request.','AbortError');port.postMessage({id:m.id,value});}).catch(error=>{try{port.postMessage({id:m.id,error:{name:error.name||'Error',message:String(error.message).slice(0,500)}});}catch{}}).finally(()=>active--);};port.start();
     }
     IO.attach=(w,frame,appId,url,opaque=false)=>{
         const s={id:token(),w,frame,app:appId,title:OS.apps.get(appId)?.title||w.title||'Web app',caps:new Map(),streams:new Map(),staged:0,epoch:0,alive:true,state:'waiting',port:null};sessions.add(s);let doc=null,attempts=0,stopped=false,poll;
-        function offered(){if(stopped||w.closed||!frame.isConnected)return;const previous=s.state;attempts++;try{const target=frame.contentWindow,d=target.document;if(d&&d.URL!=='about:blank'&&d!==doc){const approved=opaque||new URL(d.URL).origin===new URL(url).origin&&new URL(d.URL).pathname.startsWith(new URL(url).pathname);if(!approved){if(s.state==='connected')revoke(s);s.state='outside approved app';return;}target.AsterFiles?.dispose?.();const channel=new MessageChannel();connect(s,channel.port1);doc=d;AsterIOClient.install(target,channel.port2,{policy:IO.policy(appId)});}}
+        function offered(){if(stopped||w.closed||!frame.isConnected)return;const previous=s.state;attempts++;try{const target=frame.contentWindow,d=target.document;if(d&&d.URL!=='about:blank'&&d!==doc){const approved=opaque||new URL(d.URL).origin===new URL(url).origin&&new URL(d.URL).pathname.startsWith(new URL(url).pathname);if(!approved){if(s.state==='connected')revoke(s);s.state='outside approved app';return;}target.AsterFiles?.dispose?.();const channel=new MessageChannel();connect(s,channel.port1);s.sameOrigin=true;doc=d;AsterIOClient.install(target,channel.port2,{policy:IO.policy(appId)});}}
             catch{if(s.state==='connected'&&doc){revoke(s);s.port?.postMessage({type:'close'});doc=null;}if(s.state!=='connected'){s.state='SDK required';}}
             if((attempts>=100||s.state==='connected'&&doc?.readyState==='complete')&&poll){clearInterval(poll);poll=null;}if(s.state!==previous)OS.emit('web-io');}
         function loaded(){attempts=0;offered();if(!poll)poll=setInterval(offered,50);}
-        function sendOffer(){try{const channel=new MessageChannel();connect(s,channel.port1);const origin=opaque?'*':new URL(url).origin;frame.contentWindow.postMessage({type:'aster-io-offer',policy:IO.policy(appId)},origin,[channel.port2]);}catch{s.state='SDK required';}}
+        function sendOffer(){s.sameOrigin=false;try{const channel=new MessageChannel();connect(s,channel.port1);const origin=opaque?'*':new URL(url).origin;frame.contentWindow.postMessage({type:'aster-io-offer',policy:IO.policy(appId)},origin,[channel.port2]);}catch{s.state='SDK required';}}
         const hello=e=>{if(e.source!==frame.contentWindow||e.data?.type!=='aster-io-ready')return;const expected=opaque?'null':new URL(url).origin;if(e.origin!==expected||typeof e.data.nonce!=='string'||e.data.nonce===s.lastHello)return;s.lastHello=e.data.nonce;sendOffer();};window.addEventListener('message',hello);
         frame.addEventListener('load',loaded);poll=setInterval(offered,50);queueMicrotask(offered);
         const dispose=()=>{if(stopped)return;stopped=true;clearInterval(poll);window.removeEventListener('message',hello);frame.removeEventListener('load',loaded);s.port?.postMessage({type:'close'});revoke(s);s.alive=false;s.port?.close();if(activePointer?.source===s)activePointer();sessions.delete(s);for(const [id,o]of offers)if(o.session===s)offers.delete(id);OS.emit('web-io');};w.addCleanup(dispose);return dispose;
@@ -3343,17 +3359,29 @@ struct Out { @builtin(position) pos:vec4f, @location(0) local:vec2f, @location(1
     IO.importFiles=async(files,dir)=>{validPath(dir);const rows=files.map(f=>({name:M.name(f.name),content:f.blob||f,mime:f.type||f.blob?.type||''}));if(rows.reduce((n,r)=>n+r.content.size,0)>L.batch||rows.some(r=>r.content.size>L.file)||rows.length>L.entries)fail('Import exceeds transfer limits.','QuotaExceededError');return OS.fileOps.execute({kind:'import',destination:dir,files:rows});};
     IO.acceptDrop=async(event,dir)=>{const id=event.dataTransfer.getData('application/x-aster-transfer');if(id&&!event.dataTransfer.getData('application/x-aster-paths')){const o=IO.getOffer(id),files=o.paths?await IO.filesFromPaths(o.paths):o.files;await IO.importFiles(files,dir);return true;}return false;};
     let activePointer=null;
-    IO.pointerDrag=(id,x,y,source=null)=>{
+    IO.pointerDrag=(id,x,y,source=null,gesture=null)=>{
         const offer=IO.getOffer(id);if(document.querySelector('.io-picker,.dialog-backdrop'))fail('Close the active dialog before dragging.','InvalidStateError');activePointer?.();
         const overlay=OS.el('div',{class:'io-drag-overlay'}),ghost=OS.el('div',{class:'io-drag-ghost',text:(offer.paths?.length||offer.files.length)+' file(s) · drop to share'});overlay.append(ghost);document.body.append(overlay);
         const move=e=>{ghost.style.left=(e.clientX+14)+'px';ghost.style.top=(e.clientY+14)+'px';};move({clientX:x,clientY:y});
-        let ended=false;const clean=()=>{if(ended)return;ended=true;overlay.remove();clearTimeout(timer);window.removeEventListener('keydown',key,true);if(activePointer===clean)activePointer=null;};
-        const key=e=>{if(e.key==='Escape'){e.preventDefault();clean();}};const timer=setTimeout(clean,15000);clean.source=source;activePointer=clean;window.addEventListener('keydown',key,true);overlay.onpointermove=move;
-        overlay.onpointercancel=clean;overlay.onpointerup=e=>{if(!e.isTrusted)return;const x=e.clientX,y=e.clientY;clean();try{const o=IO.getOffer(id);if(source)check(source,'dropOut');const target=document.elementFromPoint(x,y);const destination=[...sessions].find(s=>s.frame===target&&s.alive&&s.state==='connected');
-            if(destination){check(destination,'dropIn');const r=destination.frame.getBoundingClientRect();destination.port.postMessage({type:'deliver',token:id,x:x-r.left,y:y-r.top});return;}
-            if(target?.closest('.explorer-main,.explorer-file')){const dt=new DataTransfer();dt.setData('application/x-aster-transfer',id);if(o.paths)dt.setData('application/x-aster-paths',JSON.stringify(o.paths));target.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt,ctrlKey:e.ctrlKey,clientX:x,clientY:y}));return;}
-            if(target?.closest('#desktop')){const files=o.paths?IO.filesFromPaths(o.paths):Promise.resolve(o.files);files.then(f=>IO.importFiles(f,'/Desktop')).catch(reportError);}
-        }catch(error){reportError(error);}};
+        let ended=false;const clean=()=>{if(ended)return;ended=true;overlay.remove();clearTimeout(timer);window.removeEventListener('keydown',key,true);window.removeEventListener('pointermove',move,true);window.removeEventListener('pointerup',up,true);window.removeEventListener('pointercancel',clean,true);if(activePointer===clean)activePointer=null;};
+        async function finish(x,y,ctrlKey=false,remote=false){
+            if(ended)return;clean();try{
+                const o=IO.getOffer(id);if(source)check(source,'dropOut');const target=document.elementFromPoint(x,y);const destination=[...sessions].find(s=>s.frame===target&&s.alive&&s.state==='connected');
+                const explorer=target?.closest('.explorer-main,.explorer-file'),desktop=target?.closest('#desktop');if(!destination&&!explorer&&!desktop)return;
+                // A MessagePort cannot certify a physical pointer release. An
+                // isolated app's report must never authorize an automatic write
+                // to the desktop or unsolicited sharing with another app.
+                if(remote&&source&&!source.sameOrigin){const targetName=destination?.title||(explorer?'this Explorer folder':'Desktop');const ok=await ask(source,{title:'Complete file transfer?',message:source.title+' wants to share '+(o.paths?.length||o.files.length)+' file(s) with '+targetName+'. Only confirm if you just dragged these files.',confirm:'Transfer files'});if(!ok)return;IO.getOffer(id);check(source,'dropOut');}
+                if(!target.isConnected)return;
+                if(destination){check(destination,'dropIn');const r=destination.frame.getBoundingClientRect();destination.port.postMessage({type:'deliver',token:id,x:x-r.left,y:y-r.top});return;}
+                if(explorer){const dt=new DataTransfer();dt.setData('application/x-aster-transfer',id);if(o.paths)dt.setData('application/x-aster-paths',JSON.stringify(o.paths));target.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt,ctrlKey,clientX:x,clientY:y}));return;}
+                if(desktop){const files=o.paths?await IO.filesFromPaths(o.paths):o.files;await IO.importFiles(files,'/Desktop');}
+            }catch(error){if(error.name!=='AbortError')reportError(error);}
+        }
+        const up=e=>{if(e.isTrusted)void finish(e.clientX,e.clientY,e.ctrlKey);};
+        const key=e=>{if(e.key==='Escape'){e.preventDefault();clean();}};const timer=setTimeout(clean,15000);clean.source=source;activePointer=clean;
+        clean.remote=m=>{if(!source||m.gesture!==gesture||m.token!==id||ended)return;if(m.phase==='cancel'){clean();return;}if(!Number.isFinite(m.x)||!Number.isFinite(m.y))return;const r=source.frame.getBoundingClientRect(),x=r.left+m.x,y=r.top+m.y;if(x<0||x>=innerWidth||y<0||y>=innerHeight){if(m.phase==='end')clean();return;}move({clientX:x,clientY:y});if(m.phase==='end')void finish(x,y,m.ctrlKey===true,true);};
+        window.addEventListener('keydown',key,true);window.addEventListener('pointermove',move,true);window.addEventListener('pointerup',up,true);window.addEventListener('pointercancel',clean,true);
         return clean;
     };
     // The actual Explorer pointer gesture feeds the same existing drop operation

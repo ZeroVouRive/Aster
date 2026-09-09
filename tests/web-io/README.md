@@ -15,7 +15,7 @@ session-grant expiration are checked across a complete page reload.
 
 The native chooser and download tests use Playwright's actual browser file chooser
 and download events, not substituted native function stubs. Drag tests use real
-mouse gestures and the production pointer relay. Native directory import planning
+mouse gestures and the production pointer relay. Depending on event routing, an isolated source requires the visible host confirmation. A separate direct broker security test verifies that a remote release cannot import before confirmation and that Cancel does not write anything. Same-origin HTTP tests also exercise actual private-root file creation and revocation. Native directory import planning
 is separately tested with actual Blobs; it is not a claim of a human OS-directory
 drag. Final artifacts identify mode and contain screenshots/results.
 

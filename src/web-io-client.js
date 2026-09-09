@@ -72,25 +72,41 @@
         const drop=e=>{if(transferred.has(e)||!policy.dropIn)return;const token=e.dataTransfer.getData('application/x-aster-transfer');if(!token)return;e.preventDefault();e.stopImmediatePropagation();void receiveDrop(token,e.target||dragTarget,{clientX:e.clientX,clientY:e.clientY});};
         win.document.addEventListener('dragover',dragover,true);win.document.addEventListener('drop',drop,true);undo.push(()=>{win.document.removeEventListener('dragover',dragover,true);win.document.removeEventListener('drop',drop,true);});
         // Capture genuine page File payloads during dragstart (the only write phase).
-        const dragstart=e=>{if(!policy.dropOut||!e.isTrusted)return;const anchor=e.target.closest?.('a[download]'),blob=anchor&&blobForLink(anchor);let files=[...e.dataTransfer.files];if(!files.length&&blob)files=[new win.File([blob],anchor.download||'Download',{type:blob.type})];if(!files.length)return;
+        let lastPointer=null;const rememberPointer=e=>{if(e.isTrusted&&e.button===0)lastPointer={pointerId:e.pointerId,clientX:e.clientX,clientY:e.clientY,ctrlKey:e.ctrlKey};};win.addEventListener('pointerdown',rememberPointer,true);undo.push(()=>win.removeEventListener('pointerdown',rememberPointer,true));
+        const dragstart=e=>{if(!policy.dropOut||!e.isTrusted||!lastPointer)return;const anchor=e.target.closest?.('a[download]'),blob=anchor&&blobForLink(anchor);let files=[...e.dataTransfer.files];if(!files.length&&blob)files=[new win.File([blob],anchor.download||'Download',{type:blob.type})];if(!files.length)return;
             // Capture bytes before the browser leaves its read/write drag phase.
             // Opaque frames cannot reliably use native cross-frame drags; relay
-            // this same user gesture and require trusted parent pointer release.
-            e.preventDefault();const x=e.clientX,y=e.clientY;void request('offer',{files:files.map(f=>({name:f.name,blob:f,type:f.type}))}).then(r=>{api.lastOffer=r;return request('pointerStart',{token:r.token,x,y});}).catch(()=>{});
+            // this gesture; isolated remote release requires host confirmation.
+            e.preventDefault();const offered=request('offer',{files:files.map(f=>({name:f.name,blob:f,type:f.type}))}).then(r=>{api.lastOffer=r;return r;});relayDrag(e.target,offered,{...lastPointer,clientX:e.clientX,clientY:e.clientY});
         };
         win.document.addEventListener('dragstart',dragstart);undo.push(()=>win.document.removeEventListener('dragstart',dragstart));
+        // Pointer events may remain in the source iframe's browser process until
+        // release. Forward that gesture over the existing port. The host treats
+        // remote release as untrusted and asks for confirmation before sharing.
+        function relayDrag(element,offer,startEvent){
+            const gesture=Array.from(win.crypto.getRandomValues(new Uint8Array(16)),n=>n.toString(16).padStart(2,'0')).join('');
+            let prepared=null,ready=false,finished=false,last={phase:'move',x:startEvent.clientX,y:startEvent.clientY,ctrlKey:startEvent.ctrlKey};
+            const send=()=>{if(ready&&!dead)port.postMessage({type:'pointer',gesture,token:prepared.token,...last});};
+            const move=e=>{if(!e.isTrusted||e.pointerId!==startEvent.pointerId||finished)return;last={phase:'move',x:e.clientX,y:e.clientY,ctrlKey:e.ctrlKey};send();};
+            const release=e=>{if(!e.isTrusted||e.pointerId!==startEvent.pointerId||finished)return;finished=true;last={phase:e.type==='pointercancel'?'cancel':'end',x:e.clientX,y:e.clientY,ctrlKey:e.ctrlKey};cleanup();send();};
+            const cancel=e=>{if(e.key==='Escape'){finished=true;last.phase='cancel';cleanup();send();}};
+            function cleanup(){win.removeEventListener('pointermove',move,true);win.removeEventListener('pointerup',release,true);win.removeEventListener('pointercancel',release,true);win.removeEventListener('keydown',cancel,true);clearTimeout(timer);try{if(element.hasPointerCapture(startEvent.pointerId))element.releasePointerCapture(startEvent.pointerId);}catch{}}
+            win.addEventListener('pointermove',move,true);win.addEventListener('pointerup',release,true);win.addEventListener('pointercancel',release,true);win.addEventListener('keydown',cancel,true);
+            try{element.setPointerCapture(startEvent.pointerId);}catch{}
+            const timer=setTimeout(()=>{finished=true;last.phase='cancel';cleanup();send();},15000);
+            Promise.resolve(offer).then(value=>{prepared=value;return request('pointerStart',{token:prepared.token,gesture,x:startEvent.clientX,y:startEvent.clientY});}).then(()=>{ready=true;send();}).catch(()=>{finished=true;cleanup();});
+        }
         const api={version:1,get connected(){return !dead;},get policy(){return {...policy};},get capabilities(){return {structuredCloneHandles:false,syncAccess:false,opaqueFiles:true};},
             open:o=>request('open',{options:opts(o)}).then(r=>r.map(handle)),save:o=>request('save',{options:opts(o)}).then(handle),directory:o=>request('folder',{options:opts(o)}).then(handle),saveBlob,
             async makeDraggable(element,files){
                 const rows=files.map(f=>({name:f.name,blob:f,type:f.type})),offer=await request('offer',{files:rows});
                 // Pointer relay avoids native drag restrictions on opaque sandbox
-                // frames. The parent commits only on its own trusted pointer-up.
+                // frames. Remote release is confirmed by the host before importing.
                 let origin=null;const prior=element.draggable,oldTouch=element.style.touchAction;
                 element.draggable=false;element.style.touchAction='none';
                 const down=e=>{if(!policy.dropOut||e.button!==0||!e.isTrusted)return;origin={x:e.clientX,y:e.clientY};e.preventDefault();};
                 const move=e=>{if(!origin||!e.buttons)return;if(Math.hypot(e.clientX-origin.x,e.clientY-origin.y)<6)return;origin=null;
-                    if(element.hasPointerCapture?.(e.pointerId))element.releasePointerCapture(e.pointerId);
-                    void request('pointerStart',{token:offer.token,x:e.clientX,y:e.clientY}).catch(()=>{});};
+                    relayDrag(element,offer,e);};
                 const up=()=>origin=null;element.addEventListener('pointerdown',down);win.addEventListener('pointermove',move);win.addEventListener('pointerup',up);
                 const dispose=()=>{element.removeEventListener('pointerdown',down);win.removeEventListener('pointermove',move);win.removeEventListener('pointerup',up);element.draggable=prior;element.style.touchAction=oldTouch;request('releaseOffer',{token:offer.token}).catch(()=>{});};undo.push(dispose);return dispose;
             },
