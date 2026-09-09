@@ -147,7 +147,7 @@
             const viewB = OS.el('button', { html: OS.icon('grid', 17) + '<span class="cmd-text">View</span>' + OS.icon('down', 11), onclick: e => OS.context(e, [{ text: 'Details', icon: 'list', action: () => { view = 'list'; w.state.view = view; render(); } }, { text: 'Large icons', icon: 'grid', action: () => { view = 'grid'; w.state.view = view; render(); } }, { text: 'Toggle details pane', icon: 'taskview', action: () => { details.hidden = !details.hidden; } }]) });
             const extractB=OS.el('button',{class:'extract-command',text:'Extract all',hidden:true,onclick:OS.guard(()=>archiveActive?extractCurrent():OS.openCompressedFolder([...selected][0],targetDir(),navigate))});
             const moreB = button('more', 'More actions', e => { }, 'icon-button');
-            moreB.onclick = e => OS.context(e, [{text:'Undo '+OS.fileOps.undoLabel,icon:'undo',key:'Ctrl+Z',disabled:!OS.fileOps.canUndo,action:()=>OS.fileOps.undo()},{text:'Redo '+OS.fileOps.redoLabel,icon:'redo',key:'Ctrl+Y',disabled:!OS.fileOps.canRedo,action:()=>OS.fileOps.redo()},{text:'File operations',icon:'copy',action:()=>OS.fileOps.show()},null,{text:'Compress to ZIP file',icon:'folder',disabled:archiveActive||!selected.size||path==='/.Trash',action:createZip},{text:'New folder tab',icon:'plus',action:()=>openTab(path)},{ text: 'Import files', icon: 'upload', disabled:archiveActive, action: async () => { const f = await OS.readFile('', true); if (f.length)
+            moreB.onclick = e => OS.context(e, [{text:'Undo '+OS.fileOps.undoLabel,icon:'undo',key:'Ctrl+Z',disabled:!OS.fileOps.canUndo,action:()=>OS.fileOps.undo()},{text:'Redo '+OS.fileOps.redoLabel,icon:'redo',key:'Ctrl+Y',disabled:!OS.fileOps.canRedo,action:()=>OS.fileOps.redo()},{text:'File operations',icon:'copy',action:()=>OS.fileOps.show()},{text:'Prepare browser export',icon:'download',disabled:!selected.size||archiveActive,action:()=>OS.webIO.prepareExport([...selected])},null,{text:'Compress to ZIP file',icon:'folder',disabled:archiveActive||!selected.size||path==='/.Trash',action:createZip},{text:'New folder tab',icon:'plus',action:()=>openTab(path)},{ text: 'Import files', icon: 'upload', disabled:archiveActive, action: async () => { const f = await OS.readFile('', true); if (f.length)
                         await importFiles(f, targetDir()); } }, { text: 'Connect local folder', icon: 'folder', action: async () => navigate(await OS.fs.mount()) }, { text: 'Open in Terminal', icon: 'terminal', action: () => OS.launch('terminal', { cwd: targetDir() }) }, null, { text: 'Empty Recycle Bin', icon: 'trash', danger: true, action: async () => { if (await OS.confirm('Empty Recycle Bin?', 'All items in the virtual Recycle Bin will be permanently deleted.', 'Empty', true)) {
                         for (const f of await OS.fs.list('/.Trash'))
                             await OS.fs.remove(f.path, true);
@@ -201,7 +201,7 @@
             function wireRow(el, entry) { el.dataset.path = entry.path; el.setAttribute('aria-selected', String(selected.has(entry.path))); el.onclick = e => { e.stopPropagation(); select(e, entry); }; el.ondblclick = () => { selected = new Set([entry.path]); openSelection(); }; el.oncontextmenu = e => context(e, entry); el.draggable = !archiveActive&&path !== '/.Trash'; el.ondragstart = e => { if (!selected.has(entry.path)) {
                 selected = new Set([entry.path]);
                 markSelection();
-            } e.dataTransfer.setData('application/x-aster-paths', JSON.stringify([...selected])); e.dataTransfer.effectAllowed = 'copyMove'; }; if (!archiveActive && entry.kind === 'directory') {
+            } e.dataTransfer.setData('application/x-aster-paths', JSON.stringify([...selected])); e.dataTransfer.effectAllowed = 'copyMove'; OS.webIO?.beginDrag(e,[...selected]); }; if (!archiveActive && entry.kind === 'directory') {
                 el.ondragover = e => { e.preventDefault(); e.stopPropagation(); el.classList.add('selected'); };
                 el.ondragleave = () => markSelection();
                 el.ondrop = OS.guard(async (e) => { e.preventDefault(); e.stopPropagation(); await drop(e, entry.path); });
@@ -375,7 +375,7 @@
             }
             function navItem(name, dest, icon, pin = false) { return OS.el('button', { class: 'nav-item' + (path === dest ? ' active' : ''), html: OS.icon(icon, 17) + `<span>${esc(name)}</span>` + (pin ? OS.icon('pin', 11, 'nav-pin') : ''), onclick: () => navigate(dest) }); }
             function navigate(dest) { archivePrefix='';path = dest; history = history.slice(0, historyIndex + 1); history.push(dest); historyIndex++; selected.clear(); query = ''; search.value = ''; OS.guard(render)(); }
-            async function drop(e, dir = targetDir()) { if(archiveActive)throw Error('Extract the compressed folder before adding files.');const nativeFiles = Array.from(e.dataTransfer.files); if (nativeFiles.length) {
+            async function drop(e, dir = targetDir()) { if(!archiveActive && !dir.startsWith('/Local') && !e.dataTransfer.getData('application/x-aster-paths') && await OS.webIO?.acceptDrop(e,dir)){await render();return;}if(archiveActive)throw Error('Extract the compressed folder before adding files.');const nativeFiles = Array.from(e.dataTransfer.files); if (nativeFiles.length) {
                 await importFiles(nativeFiles, dir);
                 OS.notify('Files imported', `${nativeFiles.length} file${nativeFiles.length === 1 ? '' : 's'} added to ${OS.fs.name(dir)}.`);
             }
@@ -695,7 +695,8 @@
                     const frame = OS.el('iframe', { class: 'browser-iframe', sandbox: 'allow-scripts allow-forms allow-modals allow-downloads', title: t.title });
                     const html = await OS.fs.text(file);
                     if (!isCurrent()) return;
-                    frame.srcdoc = html; t.pane.append(note, frame);
+                    frame.srcdoc = OS.webIO ? OS.webIO.bootstrap(html) : html; t.pane.append(note, frame);
+                    t.detachFrame=OS.webIO?.attach(w,frame,'local-html', 'about:srcdoc',true);
                 }
                 else if (/^https?:\/\//i.test(t.url)) {
                     const u = new URL(t.url);
@@ -708,11 +709,12 @@
                     // Unknown websites and local HTML remain opaque-origin sandboxes.
                     frame.dataset.browserPolicy = policy.trusted ? 'reviewed-app' : 'isolated';
                     frame.src = u.href; t.pane.append(note, frame);
+                    const ioApp=addresses.catalogApp(u.href,OS.webCatalog?.apps||[]);const detachIO=ioApp?OS.webIO?.attach(w,frame,ioApp.id,u.href):null;
                     const focusFrame = () => {
                         if (isCurrent() && active === t.id && document.activeElement === frame && !w.minimized && w.desktop === OS.activeDesktop) { OS.closePanels?.(); w.focus(false); }
                     };
                     window.addEventListener('blur', focusFrame);
-                    t.detachFrame = () => window.removeEventListener('blur', focusFrame);
+                    t.detachFrame = () => {window.removeEventListener('blur', focusFrame);detachIO?.();};
                 }
                 else {
                     t.title = 'Address not supported';

@@ -1,3 +1,14 @@
+## Aster Web Files (2.0)
+
+Web apps can use Aster-backed open/save/folder pickers, scoped asynchronous file
+handles, atomic streaming writes, file inputs and generated downloads. Global and
+per-app overrides return routes to native browser I/O; revoke access without
+reloading documents. Explorer/app pointer transfers and a device export shelf are
+integrated with the existing shell. [Usage, SDK and exact scope](docs/web-files.md).
+Same-origin owned apps connect automatically; different-origin sites need the
+cooperative SDK. No universal cross-origin interception or native OS drag-out is
+claimed. See [verification](tests/web-io/README.md).
+
 ## Aster 1.9.4 — adaptive artwork and integrated desktop workflows
 
 Original **Aster Atelier** icons now follow the selected desktop: distinct layered

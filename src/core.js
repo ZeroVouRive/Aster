@@ -2,7 +2,7 @@
 'use strict';
 (() => {
     const OS = window.Aster = {
-        version: '1.9.4', apps: new Map(), windows: new Map(), mounts: new Map(),
+        version: '2.0', apps: new Map(), windows: new Map(), mounts: new Map(),
         events: new EventTarget(), clipboard: null, started: performance.now(),
         metrics: { fps: 0, frameMs: 0, drawCalls: 0, mode: 'Starting', frames: [] },
         settings: { theme: 'light', accent: '#176ae6', wallpaper: 'bloom', transparency: true, motion: true,
@@ -124,8 +124,9 @@
     OS.registerCustom = record => OS.register(record.id, { title: record.title, description: 'Your sandboxed HTML application', category: 'Your apps', width: 850, height: 610, icon: 'code', custom: true, mount: async (w) => {
             const frame = OS.el('iframe', { class: 'app-frame', sandbox: 'allow-scripts allow-forms allow-modals allow-downloads', title: record.title });
             const file = await OS.fs.read(record.path);
-            frame.srcdoc = await OS.fs.text(file);
+            frame.srcdoc = OS.webIO ? OS.webIO.bootstrap(await OS.fs.text(file)) : await OS.fs.text(file);
             w.body.append(frame);
+            OS.webIO?.attach(w,frame,record.id,'about:srcdoc',true);
             w.addCleanup(() => { frame.srcdoc = ''; });
         } });
     OS.appForFile = (path, mime = '') => {
@@ -462,6 +463,7 @@
         OS.customApps = await OS.db.get('customApps') || [];
         OS.customApps.forEach(OS.registerCustom);
         await OS.initDesktopServices();
+        await OS.webIO?.initialize();
         await OS.themes?.initialize();
         OS.applySettings();
     };
