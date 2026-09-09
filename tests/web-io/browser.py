@@ -140,6 +140,8 @@ def main(args):
      js("await OS.themes.select(arg);",theme);frame.locator('#open').click();d=picker();assert d.is_visible();page.screenshot(path=str(out/('picker-'+theme+'.png')));d.get_by_role('button',name='Cancel',exact=True).click();assert done()['error']['name']=='AbortError'
     page.set_viewport_size({'width':390,'height':844});page.wait_for_function('innerWidth===390');js('iow.minimized=false;iow.focus();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));');frame.locator('#open').focus();frame.locator('#open').press('Enter');d=page.get_by_role('dialog',name='Open from Aster',exact=True);d.wait_for();bounds=d.bounding_box();assert bounds['x']>=0 and bounds['x']+bounds['width']<=391;page.screenshot(path=str(out/'picker-mobile.png'));page.keyboard.press('Escape');frame.wait_for_function('error?.name==="AbortError"');page.set_viewport_size({'width':1440,'height':1000});js("await OS.themes.select('windows-light');")
    check('The real picker follows three OS profiles, preserves cancellation and fits mobile',themepicker)
+   from review_checks import run as review_checks
+   review_checks(page,ctx,js,picker,frame,done,check,args,ROOT,origin)
    def cleanup():
     js('await iow.close(true);');page.wait_for_function('!Aster.webIO.sessions.length');assert page.locator('.io-picker').count()==0
    check('Closing windows revokes sessions, streams and transfer offers',cleanup)

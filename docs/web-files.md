@@ -4,7 +4,7 @@
 
 Open **Settings → Apps → Web app files** (searchable from Start). Global defaults
 apply to all catalog and installed apps. Each app has independent **inherit / Aster
-/ browser** choices for master integration, open, save/write, directory pickers,
+/ browser** choices for master integration, open, save pickers, write-through handles, directory pickers,
 HTML file inputs, generated downloads, incoming drops, outgoing transfers, and
 main-thread private storage. The global master switch wins even over an app-level enabled override; an app master switch also wins over its subordinate switches.
 Native device drops into Aster have a separate switch.
@@ -19,8 +19,10 @@ capabilities, never retained across a page reload.
 The Aster picker shows folders, names, types, sizes, search, common locations,
 multiple selection, file filters, new-folder creation and overwrite confirmation.
 Use Ctrl/Command-click for multiple files. The app receives only your confirmed
-file(s) or the selected folder and its descendants. New save targets are created
-empty, but replacing an existing file happens only when its writable stream closes.
+file(s) or the selected folder and its descendants. Save selection creates a pending
+handle, not an empty filesystem entry. New content and replacement commit only when
+the writable stream closes. Aborting a new write therefore leaves no empty file.
+This deferred-creation choice deliberately differs from native save-picker creation semantics.
 
 ## Connection modes — an important boundary
 
@@ -39,6 +41,9 @@ empty, but replacing an existing file happens only when its writable stream clos
    Settings reports **SDK required**, not a false connected status. A standalone
    file-hosted Aster and HTTPS catalog pages are different origins. Arbitrary
    websites opened in Orbit are not automatically authorized as catalog apps.
+   Choose **Connect Aster files** in Orbit to explicitly register that origin for
+   cooperative SDK requests. The original opaque sandbox is retained; merely loading
+   a website does not grant it access. The site then appears in per-app Settings.
 
 These distinctions apply even when the global integration switch is on. The
 collection still launches all 74 projects; that does not prove every I/O pathway
@@ -57,7 +62,7 @@ picker, and ordinary Save writes through the granted Aster handle.
   `getFileHandle`, `getDirectoryHandle`, `removeEntry` (including recursive),
   `resolve`, permission queries and identity comparisons.
 - A real browser `WritableStream`, including writer/pipeTo use and convenience
-  `write`, `seek`, `truncate`, `close`, `abort`; strings, ArrayBuffers, typed views,
+  `write`, `seek`, `truncate`, `close`, `abort`; exclusive or siloed writer mode; strings, ArrayBuffers, typed views,
   Blobs, positional writes, sparse zero fill and keepExistingData.
 - File inputs, labels, programmatic `.click()` and `.showPicker()`, multiple files,
   `webkitdirectory`, actual FileList and input/change/cancel events.
@@ -114,7 +119,7 @@ Load this before your application captures native file API functions:
 <script>
 window.ASTER_FILE_HOST_ORIGINS = ['https://wieslawsoltes.github.io'];
 </script>
-<script src="https://wieslawsoltes.github.io/Aster/src/web-io-client.js"></script>
+<script src="https://wieslawsoltes.github.io/Aster/sdk/aster-files.js"></script>
 ```
 
 The SDK only connects to its actual parent window with an exact allowed origin
@@ -157,12 +162,31 @@ Recursive deletion also checks for newly added descendants to avoid orphaning
 concurrent work. Browser-memory fallback uses the same plan/validation rules.
 
 Limits: 64 MiB/file, 128 MiB staged data and transfer pool, 2,048 directory entries
-and handles, 24 path levels, 12 pending requests and 8 streams per connection;
+and 4,096 reusable handles, 24 path levels, 12 pending requests and 8 streams per connection;
 256 per-app preference records. Pickers are serialized and filter dictionaries are
 bounded. Offers expire after five minutes, Explorer drag tokens after 30 seconds;
 a timer releases expired Blob references. Closing the frame restores hooked
 methods, revokes grants and streams, and closes the port. Preferences and source
 files are local; no external execution backend or analytics is introduced.
+
+Picker requests require actual transient browser activation on both the adapter
+and broker sides; a startup/timer cannot silently open a file dialog. Repeated
+folder enumeration reuses scoped child handles, preflighting remaining capacity
+rather than accumulating grants. The filesystem root and another app's private
+storage are never public picker scopes. Directory kind and file revision are
+revalidated after dialogs and before committing.
+
+`AsterFileClient.connect({parentOrigins: [...]})` is the explicit SDK connection
+entry point. It returns the same `AsterFiles` instance if already connected.
+`describeHandle(handle)` / `restoreHandle(description)` allow a live session to
+retain handle identity. Descriptions are revoked by policy changes/reload; they
+are not native structured-cloneable handles. The SDK is generated from the same
+client implementation as automatic adapters and checked for byte equality.
+
+The separate write switch restricts mutation through file/directory handles;
+exports/downloads and native imports have independent route switches and user
+confirmation. Browser fallback affects future native picker calls, never grants
+an old revoked Aster handle direct host-drive access.
 
 The library of app policies is not yet included in the generic Aster backup;
 export important files normally. Clearing browser storage removes virtual data.

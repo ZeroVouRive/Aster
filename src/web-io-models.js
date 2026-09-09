@@ -1,12 +1,14 @@
 /* Bounded file integration policy and payload validation. MIT. */
 'use strict';
 (function(root){
-    const LIMITS=Object.freeze({file:64*1024*1024,batch:128*1024*1024,entries:2048,handles:2048,requests:12,streams:8,apps:256,depth:24});
-    const FEATURES=Object.freeze(['enabled','open','save','folders','inputs','downloads','dropIn','dropOut','storage']);
-    const DEFAULTS=Object.freeze({enabled:true,open:true,save:true,folders:true,inputs:true,downloads:true,dropIn:true,dropOut:true,storage:false});
+    const LIMITS=Object.freeze({file:64*1024*1024,batch:128*1024*1024,entries:2048,handles:4096,requests:12,streams:8,apps:256,depth:24});
+    const FEATURES=Object.freeze(['enabled','open','save','folders','inputs','downloads','dropIn','dropOut','storage','write']);
+    const DEFAULTS=Object.freeze({enabled:true,open:true,save:true,folders:true,inputs:true,downloads:true,dropIn:true,dropOut:true,storage:false,write:true});
     const fail=(message,name='TypeError')=>{const e=new Error(message);e.name=name;throw e;};
     function name(value){if(typeof value!=='string'||!value||value.length>255||value.trim()!==value||/[\\/\x00-\x1f]/.test(value)||value==='.'||value==='..')fail('Invalid file or folder name.');return value;}
     function path(value){if(typeof value!=='string'||value.length>2048||!value.startsWith('/')||value.includes('\\'))fail('Invalid virtual path.');const parts=value.split('/').slice(1);if(value==='/')return value;parts.forEach(name);if(parts.length>LIMITS.depth)fail('Folder nesting limit exceeded.');if(parts[0]==='Local'||parts[0].startsWith('.'))fail('System and mounted host folders are not shared.','NotAllowedError');return value;}
+    const privatePath=p=>p==='/Documents/App storage'||p.startsWith('/Documents/App storage/');
+    function grantPath(p,storageRoot=null){path(p);if(p==='/')fail('Select one user folder, not the filesystem root.','NotAllowedError');if(privatePath(p)&&(!storageRoot||!inside(storageRoot,p)))fail('App-private storage is not a public file scope.','NotAllowedError');return p;}
     function relative(value){if(typeof value!=='string'||value.length>2048)fail('Invalid relative path.');const parts=value.split('/');parts.forEach(name);if(parts.length>LIMITS.depth)fail('Folder nesting limit exceeded.');return parts.join('/');}
     const inside=(base,p)=>p===base||(base==='/'?p.startsWith('/'):p.startsWith(base+'/'));
     function options(value={}){if(!value||typeof value!=='object')fail('Invalid picker options.');const types=[];
@@ -19,5 +21,5 @@
     function policy(raw,id){const p={...DEFAULTS,...raw.defaults,...raw.apps?.[id]};if(raw.defaults?.enabled===false||!p.enabled)for(const k of FEATURES)p[k]=false;return p;}
     function integer(value,max=LIMITS.file){if(!Number.isSafeInteger(value)||value<0||value>max)fail('Position or size exceeds the file limit.','QuotaExceededError');return value;}
     function stamp(e){return e?JSON.stringify([e.kind,e.revision||null,e.modified||0,e.size||0]):null;}
-    const api=Object.freeze({LIMITS,FEATURES,DEFAULTS,name,path,relative,inside,options,accepts,settings,policy,integer,stamp,fail});root.AsterIOModels=api;if(typeof module==='object')module.exports=api;
+    const api=Object.freeze({LIMITS,FEATURES,DEFAULTS,name,path,grantPath,privatePath,relative,inside,options,accepts,settings,policy,integer,stamp,fail});root.AsterIOModels=api;if(typeof module==='object')module.exports=api;
 })(globalThis);

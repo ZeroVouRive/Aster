@@ -709,7 +709,8 @@
                     // Unknown websites and local HTML remain opaque-origin sandboxes.
                     frame.dataset.browserPolicy = policy.trusted ? 'reviewed-app' : 'isolated';
                     frame.src = u.href; t.pane.append(note, frame);
-                    const ioApp=addresses.catalogApp(u.href,OS.webCatalog?.apps||[]);const detachIO=ioApp?OS.webIO?.attach(w,frame,ioApp.id,u.href):null;
+                    const ioApp=addresses.catalogApp(u.href,OS.webCatalog?.apps||[]);let detachIO=ioApp?OS.webIO?.attach(w,frame,ioApp.id,u.href):null;
+                    if(!ioApp&&OS.webIO){const connectFiles=OS.el('button',{text:'Connect Aster files',title:'Opt in this isolated website. It must load the cooperative Aster Files SDK.'});connectFiles.onclick=OS.guard(async()=>{const hash=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(u.origin)));const id='site-'+Array.from(hash,x=>x.toString(16).padStart(2,'0')).join('');if(!isCurrent())return;detachIO?.();detachIO=OS.webIO.attach(w,frame,id,u.href,true);connectFiles.disabled=true;connectFiles.textContent='Awaiting Files SDK';});note.append(connectFiles);}
                     const focusFrame = () => {
                         if (isCurrent() && active === t.id && document.activeElement === frame && !w.minimized && w.desktop === OS.activeDesktop) { OS.closePanels?.(); w.focus(false); }
                     };

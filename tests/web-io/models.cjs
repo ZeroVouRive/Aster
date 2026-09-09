@@ -14,3 +14,9 @@ test('settings and handles have explicit finite limits',()=>{a.equal(M.LIMITS.fi
 
 test('bound MIME dictionaries and extension lists',()=>{a.throws(()=>M.options({types:[{accept:{'text/plain':Array(65).fill('.txt')}}]}));a.throws(()=>M.options({types:[{accept:Object.fromEntries(Array.from({length:17},(_,i)=>['text/x-'+i,['.x']]))}]}));});
 test('project dotfiles remain usable inside a granted user folder',()=>{a.equal(M.path('/Projects/repo/.git/config'),'/Projects/repo/.git/config');a.equal(M.path('/Documents/.env'),'/Documents/.env');a.throws(()=>M.path('/.private'));});
+
+test('root is allowed only for navigation, never as a capability',()=>{a.equal(M.path('/'),'/');a.throws(()=>M.grantPath('/'),{name:'NotAllowedError'});});
+test('private scopes are excluded from public grants and sibling apps',()=>{a.throws(()=>M.grantPath('/Documents/App storage/a'),{name:'NotAllowedError'});a.throws(()=>M.grantPath('/Documents/App storage/b/x','/Documents/App storage/a'),{name:'NotAllowedError'});a.equal(M.grantPath('/Documents/App storage/a/x','/Documents/App storage/a'),'/Documents/App storage/a/x');});
+test('write policy is independent from reading and is normalized on reload',()=>{const raw=M.settings({apps:{app:{write:false}}});const p=M.policy(raw,'app');a.equal(p.write,false);a.equal(p.open,true);a.equal(p.save,true);a.equal(M.policy(M.settings(JSON.parse(JSON.stringify(raw))),'app').write,false);});
+test('handle capacity accommodates full bounded directory and its parent',()=>{a.ok(M.LIMITS.handles>M.LIMITS.entries);a.ok(M.LIMITS.handles<=4096);});
+test('public path prefix similarity cannot enter a private scope',()=>{a.equal(M.grantPath('/Documents/App storage notes/a'),'/Documents/App storage notes/a');a.throws(()=>M.grantPath('/Documents/App storage/a/../b'),{name:'TypeError'});});

@@ -1,4 +1,4 @@
-"""Unchanged deployed Notepad XP, inside the exact proposed Aster host.
+"""Unchanged deployed Notepad XP and TwinForge, inside the exact proposed Aster host.
 Only /Aster/ resources are served from the checkout. Application requests are
 never fulfilled, altered or mocked. Original application UI and model do the I/O.
 """
@@ -12,16 +12,16 @@ HOST='https://wieslawsoltes.github.io/Aster/'
 
 def main():
  OUT.mkdir(parents=True,exist_ok=True)
- report={'test':'Unmodified deployed NotepadXP with proposed Aster host','hostResourcesFromCheckout':True,'applicationRequestsMocked':False,'checks':[],'errors':[],'applicationSources':{}}
+ report={'test':'Unmodified deployed NotepadXP and TwinForge with proposed Aster host','hostResourcesFromCheckout':True,'applicationRequestsMocked':False,'checks':[],'errors':[],'applicationSources':{}}
  with sync_playwright() as p:
-  browser=p.chromium.launch(headless=True,args=['--no-sandbox']);ctx=browser.new_context(viewport={'width':1440,'height':1000},service_workers='block');page=ctx.new_page();page.set_default_timeout(45000)
+  browser=p.chromium.launch(headless=True,args=['--no-sandbox']);ctx=browser.new_context(viewport={'width':1440,'height':1000},service_workers='allow');page=ctx.new_page();page.set_default_timeout(45000)
   def serve(route):
    relative=unquote(urlsplit(route.request.url).path[len('/Aster/'):]) or 'index.html';path=(ROOT/relative).resolve()
    if ROOT not in path.parents or not path.is_file() or relative.startswith('.'):return route.fulfill(status=404,body='Not a runtime resource')
    mime=mimetypes.guess_type(str(path))[0] or 'application/octet-stream';return route.fulfill(status=200,body=path.read_bytes(),content_type=mime)
   ctx.route(HOST+'**',serve);page.on('pageerror',lambda e:report['errors'].append(str(e)))
   def response(r):
-   if '/NotepadXP/src/' in r.url and r.url.endswith('.mjs'):
+   if ('/NotepadXP/src/' in r.url and r.url.endswith('.mjs')) or r.url.rstrip('/').endswith('/TwinForge'):
     try:report['applicationSources'][r.url]=hashlib.sha256(r.body()).hexdigest()
     except Exception:pass
   page.on('response',response)
@@ -40,6 +40,21 @@ def main():
    assert result['history']>0,result;report['checks'].append({'name':'Unchanged app wrote through granted handle and retained a prior file version','status':'PASS','result':result})
    assert frame.evaluate('notepad.execute("document_read",{})')['text']=='Written by the deployed app — Ω 日本語';page.screenshot(path=str(OUT/'notepad-written-to-aster.png'))
    report['connection']=js('return OS.webIO.sessions;');report['applicationURL']=frame.url;assert report['applicationSources'],'No real app source responses recorded'
+   # Test a second unchanged, genuinely different directory-handle consumer.
+   js("await live.close(true);await OS.fs.mkdir('/Documents/TwinForgeBridge');await OS.fs.write('/Documents/TwinForgeBridge/source.txt','Shared project');window.twinApp=OS.webCatalog.apps.find(a=>a.repo==='TwinForge');window.twin=OS.openApp(twinApp.id);await twin.ready;")
+   page.wait_for_function('Aster.webIO.sessions.some(s=>s.app===twinApp.id&&s.state==="connected")')
+   tf=page.locator('.web-app-frame').element_handle().content_frame();tf.wait_for_function('window.AsterFiles?.connected && document.querySelector("#pane-0 .volume-bar select")?.options.length')
+   tf.locator('#pane-0 .mount-folder').click();d=page.get_by_role('dialog',name='Choose Aster folder',exact=True)
+   d.get_by_label('Aster folder',exact=True).fill('/Documents/TwinForgeBridge');d.get_by_role('button',name='Go',exact=True).click();d.locator('[data-io-path="/Documents/TwinForgeBridge/source.txt"]').wait_for()
+   d.get_by_role('button',name='Select folder',exact=True).click();tf.wait_for_function('document.querySelector("#pane-0 .path-input").value.includes("TwinForgeBridge")')
+   tf.locator('.functionbar [data-action="mkdir"]').click();d=tf.get_by_role('dialog',name='New folder',exact=True);d.locator('#prompt-value').fill('FromTwinForge');d.get_by_role('button',name='Create',exact=True).click()
+   for _ in range(100):
+    created=js("return await OS.fs.stat('/Documents/TwinForgeBridge/FromTwinForge');")
+    if created:break
+    page.wait_for_timeout(100)
+   assert created and created['kind']=='directory',created
+   assert js("return await OS.fs.text(await OS.fs.read('/Documents/TwinForgeBridge/source.txt'));")=='Shared project'
+   page.screenshot(path=str(OUT/'twinforge-aster-folder.png'));report['checks'].append({'name':'Unchanged TwinForge connected an Aster directory and created a real child using its F7 workflow','status':'PASS','path':created['path']});report['twinforgeURL']=tf.url
    assert not report['errors'],report['errors'];report['status']='PASS'
   except Exception as e:
    report['status']='FAIL';report['error']=str(e);page.screenshot(path=str(OUT/'failure.png'));raise
