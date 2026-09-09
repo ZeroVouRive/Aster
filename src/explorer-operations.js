@@ -11,7 +11,7 @@
     OS.db.batch=(puts=[],deletes=[])=>batch(puts.map(e=>({...e,revision:OS.uid()})),deletes);
     OS.db.writeVersioned=e=>versioned({...e,revision:OS.uid()});
     OS.db.mutateFiles=fn=>mutate(rows=>{const out=fn(rows);return {...out,puts:(out.puts||[]).map(e=>({...e,revision:OS.uid()}))};});
-    function commit(expected,change){
+    function commit(expected,change,authority=()=>{}){
         const saveHistory=(live,index,put,remove)=>{
             let next=Array.isArray(index)?index:[];const previous=new Map(live.map(e=>[e.path,e]));
             if(OS.settings.historyEnabled)for(const row of change.puts){const old=previous.get(row.path);
@@ -21,7 +21,7 @@
             }
             return next;
         };
-        const verify=live=>{if(!M.equal(live,expected))throw Error('Files changed while this operation was being prepared. Nothing was changed; try again.');};
+        const verify=live=>{authority();if(!M.equal(live,expected))throw Error('Files changed while this operation was being prepared. Nothing was changed; try again.');};
         if(OS.db.memory){
             const memory=OS.db.memory,live=[...memory.files.values()];verify(live);
             const next=new Map(memory.files),history=new Map(memory.history||[]);
@@ -37,6 +37,7 @@
     }
     function trim(){while(undo.length>M.LIMITS.journal||undo.reduce((n,r)=>n+r.bytes,0)>M.LIMITS.bytes)undo.shift();}
     async function checkpoint(job){
+        job.authority?.();
         if(job.cancelled)throw new DOMException('File operation cancelled.','AbortError');
         while(job.paused){
             // Preserve the focused/clicked controls while paused. Repainting every
@@ -72,7 +73,7 @@
             // fabricated disk I/O; Blob payloads remain immutable in browser storage.
             for(let n=0;n<job.total;n+=64){await checkpoint(job);job.completed=Math.min(n+64,job.total);changed();await new Promise(r=>setTimeout(r,0));}
             await checkpoint(job);job.status='committing';changed();
-            await commit(entries,change);
+            await commit(entries,change,job.authority);
             if(change.puts.length||change.deletes.length){
                 if(job.request.kind==='undo'){undo.pop();redo.push(change);}
                 else if(job.request.kind==='redo'){redo.pop();undo.push(change);trim();}
@@ -81,7 +82,7 @@
             }
             job.status='done';job.completed=job.total;job.results=change.results;job.skipped=change.skipped?.length||0;job.resolve({results:change.results,skipped:change.skipped||[],cancelled:false});
         }catch(e){job.status=e.name==='AbortError'?'cancelled':'error';job.error=e.message;if(e.name==='AbortError')job.resolve({results:[],cancelled:true});else job.reject(e);}
-        finally{busy=false;delete job.request;delete job.resolve;delete job.reject;changed();queueMicrotask(pump);}
+        finally{busy=false;delete job.request;delete job.authority;delete job.resolve;delete job.reject;changed();queueMicrotask(pump);}
     }
     function render(){
         if(!panel?.isConnected)return;
@@ -97,10 +98,11 @@
     const api=OS.fileOps={
         get canUndo(){return !busy&&!!undo.length;},get canRedo(){return !busy&&!!redo.length;},get undoLabel(){return undo.at(-1)?.label||'';},get redoLabel(){return redo.at(-1)?.label||'';},
         get jobs(){return jobs.map(({id,status,label,error,completed,total})=>({id,status,label,error,completed,total}));},
-        execute(request,{show=true}={}){
+        execute(request,{show=true,authority=()=>{}}={}){
             if(jobs.filter(j=>j.request).length>=M.LIMITS.queue)return Promise.reject(Error('Four operations are already queued.'));
             const labels={copy:'Copy items',move:'Move items',rename:'Rename items',trash:'Move to Recycle Bin',restore:'Restore items',create:'Create item',import:'Import files',undo:'Undo '+this.undoLabel,redo:'Redo '+this.redoLabel};
-            const job={id:OS.uid(),request:structuredClone(request),label:labels[request.kind]||'File operation',status:'queued',paused:false,cancelled:false};
+            if(typeof authority!=='function')return Promise.reject(TypeError('Expected an authority check.'));
+            const job={id:OS.uid(),authority,request:structuredClone(request),label:labels[request.kind]||'File operation',status:'queued',paused:false,cancelled:false};
             const done=new Promise((resolve,reject)=>{job.resolve=resolve;job.reject=reject;});jobs.push(job);while(jobs.length>20&&!jobs[0].request)jobs.shift();changed();if(show)this.show();queueMicrotask(pump);done.jobId=job.id;return done;
         },
         undo(){return this.execute({kind:'undo'});},redo(){return this.execute({kind:'redo'});},

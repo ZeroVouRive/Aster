@@ -6,6 +6,8 @@ import argparse, base64, re, json
 ROOT=Path(__file__).resolve().parent
 
 def build(destination:Path)->None:
+    (ROOT/'sdk').mkdir(exist_ok=True)
+    (ROOT/'sdk/aster-files.js').write_bytes((ROOT/'src/web-io-client.js').read_bytes())
     html=(ROOT/'index.html').read_text(encoding='utf-8')
     def style(match):
         path=ROOT/match.group(1)

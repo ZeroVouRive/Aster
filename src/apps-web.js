@@ -22,7 +22,7 @@
     });
     function mount(w, app) {
         const url = checkedURL(app);
-        let alive = true, loadingTimer = 0, focusTimer = 0, frame = null, detachChild = () => {};
+        let alive = true, loadingTimer = 0, focusTimer = 0, frame = null, detachChild = () => {}, detachIO = () => {};
         w.body.classList.add('web-app-window');
         w.state.webApp = app.id; // No credentials, remote document content or transient URLs.
         const toolbar = OS.el('nav', { class: 'web-app-toolbar', 'aria-label': app.title + ' web app controls' });
@@ -55,7 +55,7 @@
         };
         function load() {
             if (!alive) return;
-            clearTimeout(loadingTimer); detachChild();
+            clearTimeout(loadingTimer); detachChild(); detachIO();
             if (frame) { frame.remove(); frame.src = 'about:blank'; }
             // Scripts + same-origin are intentional for these user-owned applications:
             // they need storage, workers and WebGPU. This is NOT an isolation boundary
@@ -116,6 +116,7 @@
                 inform('Taking longer than usual. Some apps need a separate tab for sign-in, local files or browser permissions.');
             }, 15000);
             next.src = url; viewport.replaceChildren(next);
+            detachIO = OS.webIO?.attach(w,next,app.id,url) || (()=>{});
             if (!navigator.onLine) inform('You are offline. Web apps are hosted separately from the Aster desktop.');
         }
         // Cross-origin iframes do not bubble pointer events into the parent page.
@@ -131,7 +132,7 @@
         w.beforeClose = () => OS.confirm('Close ' + app.title + '?',
             'Save your work inside the app first. Aster cannot determine whether an embedded document has unsaved changes.', 'Close app');
         w.addCleanup(() => {
-            alive = false; clearTimeout(loadingTimer); clearTimeout(focusTimer); detachChild();
+            alive = false; clearTimeout(loadingTimer); clearTimeout(focusTimer); detachChild(); detachIO();
             window.removeEventListener('blur', blurred); window.removeEventListener('offline', offline); window.removeEventListener('online', online);
             if (frame) { frame.remove(); frame.src = 'about:blank'; }
             w.webFrame = null;

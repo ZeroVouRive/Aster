@@ -24,3 +24,5 @@ tests/visual-materials/artifacts/
 tests/ui-refinement/artifacts/
 
 tests/desktop-refinement/artifacts/
+
+tests/web-io/artifacts/
